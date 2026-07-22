@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/"
+title = "VexelHub"
+version = "1.0.0"
+id = "artifacts/vexelhub"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23096
+
+[services.development]
+run = "pnpm --filter @workspace/vexelhub run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/vexelhub", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/vexelhub/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23096"
+BASE_PATH = "/"
