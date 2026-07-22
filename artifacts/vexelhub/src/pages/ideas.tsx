@@ -31,24 +31,24 @@ export default function Ideas() {
       await createIdea.mutateAsync({
         data: { title, description, tags }
       });
-      toast({ title: "Idea captured!" });
+      toast({ title: "Ideia salva!" });
       setOpen(false);
       setTitle("");
       setDescription("");
       setTagsInput("");
       refetch();
     } catch (e) {
-      toast({ title: "Failed to save idea", variant: "destructive" });
+      toast({ title: "Falha ao salvar ideia", variant: "destructive" });
     }
   };
 
   const handleDelete = async (id: number) => {
     try {
       await deleteIdea.mutateAsync({ id });
-      toast({ title: "Idea deleted" });
+      toast({ title: "Ideia excluída" });
       refetch();
     } catch (e) {
-      toast({ title: "Failed to delete", variant: "destructive" });
+      toast({ title: "Falha ao excluir", variant: "destructive" });
     }
   };
 
@@ -57,27 +57,27 @@ export default function Ideas() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight text-white mb-1 flex items-center gap-3">
-            <Lightbulb className="text-yellow-400" /> Idea Bank
+            <Lightbulb className="text-yellow-400" /> Banco de Ideias
           </h1>
-          <p className="text-muted-foreground">Capture sparks before they fade away.</p>
+          <p className="text-muted-foreground">Capture insights antes que desapareçam.</p>
         </div>
         
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold shadow-[0_0_15px_rgba(234,179,8,0.4)] gap-2 border-none">
-              <Plus size={18} /> New Idea
+              <Plus size={18} /> Nova Ideia
             </Button>
           </DialogTrigger>
           <DialogContent className="bg-card border-border sm:max-w-[500px]">
             <DialogHeader>
               <DialogTitle className="text-xl text-white flex items-center gap-2">
-                <Sparkles size={20} className="text-yellow-400" /> Capture Idea
+                <Sparkles size={20} className="text-yellow-400" /> Registrar Ideia
               </DialogTitle>
             </DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4 py-4">
               <div className="space-y-2">
                 <Input 
-                  placeholder="What's the concept?" 
+                  placeholder="Qual é o conceito?" 
                   value={title} 
                   onChange={e => setTitle(e.target.value)}
                   autoFocus
@@ -86,7 +86,7 @@ export default function Ideas() {
               </div>
               <div className="space-y-2">
                 <Textarea 
-                  placeholder="Flesh out the details..." 
+                  placeholder="Desenvolva os detalhes..." 
                   value={description} 
                   onChange={e => setDescription(e.target.value)}
                   className="bg-input border-border text-white min-h-[120px] resize-none"
@@ -94,19 +94,19 @@ export default function Ideas() {
               </div>
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-                  <TagIcon size={14} /> Tags (comma separated)
+                  <TagIcon size={14} /> Tags (separadas por vírgula)
                 </div>
                 <Input 
-                  placeholder="e.g. vlog, tutorial, funny" 
+                  placeholder="ex: vlog, tutorial, engraçado" 
                   value={tagsInput} 
                   onChange={e => setTagsInput(e.target.value)}
                   className="bg-input border-border text-white"
                 />
               </div>
               <DialogFooter className="pt-4">
-                <Button type="button" variant="ghost" onClick={() => setOpen(false)} className="text-muted-foreground hover:text-white">Cancel</Button>
+                <Button type="button" variant="ghost" onClick={() => setOpen(false)} className="text-muted-foreground hover:text-white">Cancelar</Button>
                 <Button type="submit" disabled={!title.trim() || createIdea.isPending} className="bg-yellow-500 text-black hover:bg-yellow-600 font-bold">
-                  Save to Bank
+                  Salvar no Banco
                 </Button>
               </DialogFooter>
             </form>
@@ -129,8 +129,8 @@ export default function Ideas() {
         ) : ideas.length === 0 ? (
           <div className="col-span-full text-center py-20 border border-border/50 border-dashed rounded-xl bg-card/30">
             <Lightbulb size={48} className="mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-xl font-bold text-white mb-2">No ideas yet</h3>
-            <p className="text-muted-foreground">Your brilliant concepts belong here.</p>
+            <h3 className="text-xl font-bold text-white mb-2">Nenhuma ideia ainda</h3>
+            <p className="text-muted-foreground">Seus conceitos brilhantes pertencem aqui.</p>
           </div>
         ) : (
           ideas.map(idea => (
@@ -141,7 +141,7 @@ export default function Ideas() {
               </CardHeader>
               <CardContent className="pb-3">
                 <p className="text-sm text-muted-foreground line-clamp-4 whitespace-pre-wrap">
-                  {idea.description || "No details provided."}
+                  {idea.description || "Nenhum detalhe fornecido."}
                 </p>
                 {idea.tags && idea.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 mt-4">

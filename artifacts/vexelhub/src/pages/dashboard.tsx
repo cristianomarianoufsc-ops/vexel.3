@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Activity, UploadCloud, Video, Calendar as CalendarIcon, FileVideo, Lightbulb, Clock, CheckCircle2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 export default function Dashboard() {
   const { data: stats, isLoading } = useGetDashboardStats();
@@ -13,13 +14,13 @@ export default function Dashboard() {
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-white mb-1">Command Center</h1>
-          <p className="text-muted-foreground">Welcome back. Here is the pulse of your content engine.</p>
+          <h1 className="text-3xl font-extrabold tracking-tight text-white mb-1">Centro de Comando</h1>
+          <p className="text-muted-foreground">Bem-vindo de volta. Aqui está o pulso do seu motor de conteúdo.</p>
         </div>
         <Link href="/publish">
           <Button className="bg-primary hover:bg-primary/90 text-white gap-2 shadow-[0_0_15px_rgba(124,58,237,0.3)]">
             <UploadCloud size={18} />
-            New Blast
+            Nova Publicação
           </Button>
         </Link>
       </div>
@@ -41,25 +42,25 @@ export default function Dashboard() {
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard 
-              title="Total Posts" 
+              title="Total de Posts" 
               value={stats.totalPosts} 
               icon={<Video className="h-4 w-4 text-primary" />} 
               gradient="from-primary/20"
             />
             <StatCard 
-              title="Published" 
+              title="Publicados" 
               value={stats.publishedPosts} 
               icon={<CheckCircle2 className="h-4 w-4 text-green-400" />} 
               gradient="from-green-500/20"
             />
             <StatCard 
-              title="Scheduled" 
+              title="Agendados" 
               value={stats.scheduledPosts} 
               icon={<CalendarIcon className="h-4 w-4 text-cyan-400" />} 
               gradient="from-cyan-500/20"
             />
             <StatCard 
-              title="Content Ideas" 
+              title="Ideias de Conteúdo" 
               value={stats.totalIdeas} 
               icon={<Lightbulb className="h-4 w-4 text-yellow-400" />} 
               gradient="from-yellow-500/20"
@@ -71,11 +72,11 @@ export default function Dashboard() {
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-white flex items-center gap-2">
                   <Activity size={20} className="text-primary" />
-                  Recent Activity
+                  Atividade Recente
                 </h2>
                 <Link href="/posts">
                   <Button variant="link" className="text-muted-foreground hover:text-white px-0">
-                    View All
+                    Ver Todos
                   </Button>
                 </Link>
               </div>
@@ -87,11 +88,11 @@ export default function Dashboard() {
                       <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mb-4">
                         <Video size={24} className="text-muted-foreground" />
                       </div>
-                      <p className="text-white font-medium mb-1">No posts yet</p>
-                      <p className="text-sm text-muted-foreground mb-4">Your broadcast history will appear here.</p>
+                      <p className="text-white font-medium mb-1">Nenhum post ainda</p>
+                      <p className="text-sm text-muted-foreground mb-4">Seu histórico de publicações aparecerá aqui.</p>
                       <Link href="/publish">
                         <Button variant="outline" className="border-primary/50 hover:bg-primary/10 text-primary">
-                          Create your first post
+                          Criar seu primeiro post
                         </Button>
                       </Link>
                     </CardContent>
@@ -119,11 +120,11 @@ export default function Dashboard() {
                               ) : (
                                 <Video size={14} />
                               )}
-                              <span className="capitalize">{post.status}</span>
+                              <span className="capitalize">{statusLabel(post.status)}</span>
                             </span>
                             <span className="flex items-center gap-1">
                               <CalendarIcon size={14} />
-                              {format(new Date(post.createdAt), "MMM d, yyyy")}
+                              {format(new Date(post.createdAt), "d 'de' MMM, yyyy", { locale: ptBR })}
                             </span>
                           </div>
                         </div>
@@ -142,11 +143,11 @@ export default function Dashboard() {
             </div>
             
             <div className="space-y-4">
-              <h2 className="text-xl font-bold text-white">System Status</h2>
+              <h2 className="text-xl font-bold text-white">Status do Sistema</h2>
               <Card className="bg-card border-border/50">
                 <CardContent className="p-5 space-y-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground font-medium">Platforms Connected</span>
+                    <span className="text-muted-foreground font-medium">Plataformas Conectadas</span>
                     <span className="text-xl font-bold text-white">{stats.connectedPlatforms}/3</span>
                   </div>
                   <div className="w-full bg-muted rounded-full h-2">
@@ -157,8 +158,8 @@ export default function Dashboard() {
                   </div>
                   <div className="pt-4 mt-4 border-t border-border/50">
                     <Link href="/settings">
-                      <Button variant="outline" className="w-full w-full border-border hover:bg-muted/50">
-                        Manage Connections
+                      <Button variant="outline" className="w-full border-border hover:bg-muted/50">
+                        Gerenciar Conexões
                       </Button>
                     </Link>
                   </div>
@@ -172,13 +173,13 @@ export default function Dashboard() {
                       <FolderOpen size={20} />
                     </div>
                     <div>
-                      <h3 className="font-bold text-white">Media Library</h3>
-                      <p className="text-sm text-muted-foreground">{stats.totalAssets} assets stored</p>
+                      <h3 className="font-bold text-white">Biblioteca de Mídia</h3>
+                      <p className="text-sm text-muted-foreground">{stats.totalAssets} arquivo{stats.totalAssets !== 1 ? 's' : ''} armazenado{stats.totalAssets !== 1 ? 's' : ''}</p>
                     </div>
                   </div>
                   <Link href="/assets">
                     <Button variant="secondary" className="w-full bg-secondary hover:bg-secondary/80 text-white">
-                      Browse Files
+                      Navegar Arquivos
                     </Button>
                   </Link>
                 </CardContent>
@@ -189,6 +190,16 @@ export default function Dashboard() {
       ) : null}
     </div>
   );
+}
+
+function statusLabel(status: string) {
+  const map: Record<string, string> = {
+    draft: "rascunho",
+    scheduled: "agendado",
+    published: "publicado",
+    failed: "falhou",
+  };
+  return map[status] ?? status;
 }
 
 function StatCard({ title, value, icon, gradient }: { title: string, value: number, icon: React.ReactNode, gradient: string }) {
@@ -206,5 +217,4 @@ function StatCard({ title, value, icon, gradient }: { title: string, value: numb
   );
 }
 
-// Ensure FolderOpen is imported
 import { FolderOpen } from "lucide-react";

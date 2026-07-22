@@ -14,25 +14,23 @@ export default function Settings() {
 
   const handleConnect = async (platformId: 'youtube' | 'instagram' | 'tiktok') => {
     try {
-      // In a real flow, this mutation returns an OAuth URL that we redirect to.
-      // The API spec returns { url: string }
       const res = await connectPlatform.mutateAsync({ platform: platformId });
       if (res.url) {
         window.location.href = res.url;
       }
     } catch (e) {
-      toast({ title: "Connection failed", description: "Could not initiate OAuth flow", variant: "destructive" });
+      toast({ title: "Falha na conexão", description: "Não foi possível iniciar o fluxo OAuth", variant: "destructive" });
     }
   };
 
   const handleDisconnect = async (platformId: 'youtube' | 'instagram' | 'tiktok') => {
-    if (!confirm(`Are you sure you want to disconnect ${platformId}?`)) return;
+    if (!confirm(`Tem certeza que deseja desconectar ${platformId}?`)) return;
     try {
       await disconnectPlatform.mutateAsync({ platform: platformId });
-      toast({ title: "Disconnected successfully" });
+      toast({ title: "Desconectado com sucesso" });
       refetch();
     } catch (e) {
-      toast({ title: "Disconnection failed", variant: "destructive" });
+      toast({ title: "Falha ao desconectar", variant: "destructive" });
     }
   };
 
@@ -52,18 +50,18 @@ export default function Settings() {
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-3xl">
       <div>
         <h1 className="text-3xl font-extrabold tracking-tight text-white mb-1 flex items-center gap-3">
-          <SettingsIcon className="text-primary" /> Settings & Integrations
+          <SettingsIcon className="text-primary" /> Configurações e Integrações
         </h1>
-        <p className="text-muted-foreground">Connect the pipes. Wire the hub.</p>
+        <p className="text-muted-foreground">Conecte as plataformas. Configure o hub.</p>
       </div>
 
       <Card className="bg-card border-border/50 shadow-lg">
         <CardHeader>
           <CardTitle className="text-xl text-white flex items-center gap-2">
-            <Link2 size={20} className="text-primary" /> Connected Platforms
+            <Link2 size={20} className="text-primary" /> Plataformas Conectadas
           </CardTitle>
           <CardDescription>
-            Authorize VexelHub to publish directly to these accounts.
+            Autorize o VexelHub a publicar diretamente nessas contas.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -95,11 +93,11 @@ export default function Settings() {
                       <h3 className="font-bold text-white text-lg">{platformNames[pKey as keyof typeof platformNames]}</h3>
                       {isConnected ? (
                         <div className="flex items-center gap-1.5 text-sm text-green-400 font-medium">
-                          <ShieldCheck size={14} /> Connected as {platform?.accountName || 'Authorized'}
+                          <ShieldCheck size={14} /> Conectado como {platform?.accountName || 'Autorizado'}
                         </div>
                       ) : (
                         <div className="flex items-center gap-1.5 text-sm text-muted-foreground font-medium">
-                          <AlertCircle size={14} /> Not connected
+                          <AlertCircle size={14} /> Não conectado
                         </div>
                       )}
                     </div>
@@ -111,7 +109,7 @@ export default function Settings() {
                         onClick={() => handleDisconnect(pKey as any)}
                         className="border-border text-muted-foreground hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
                       >
-                        <Unlink2 size={16} className="mr-2" /> Disconnect
+                        <Unlink2 size={16} className="mr-2" /> Desconectar
                       </Button>
                     ) : (
                       <Button 
@@ -119,7 +117,7 @@ export default function Settings() {
                         className="bg-white text-black hover:bg-white/90 font-bold"
                         disabled={connectPlatform.isPending}
                       >
-                        <Link2 size={16} className="mr-2" /> Connect
+                        <Link2 size={16} className="mr-2" /> Conectar
                       </Button>
                     )}
                   </div>
@@ -130,9 +128,8 @@ export default function Settings() {
         </CardContent>
       </Card>
       
-      {/* Visual filler for empty space */}
       <div className="p-6 rounded-xl border border-border/50 bg-[repeating-linear-gradient(45deg,var(--tw-gradient-stops))] from-muted/5 to-transparent to-[10px] via-transparent via-[20px] flex items-center justify-center opacity-50">
-        <p className="text-muted-foreground text-sm font-medium tracking-widest uppercase">System Configured</p>
+        <p className="text-muted-foreground text-sm font-medium tracking-widest uppercase">Sistema Configurado</p>
       </div>
     </div>
   );

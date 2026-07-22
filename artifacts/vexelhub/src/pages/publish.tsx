@@ -11,14 +11,12 @@ import { UploadCloud, Video, CalendarIcon, Send, Sparkles, AlertCircle, RefreshC
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { format } from "date-fns";
 
 export default function Publish() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // State
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
   const [caption, setCaption] = useState("");
@@ -26,12 +24,10 @@ export default function Publish() {
   const [scheduledAt, setScheduledAt] = useState<string>("");
   const [isScheduled, setIsScheduled] = useState(false);
   
-  // Upload state
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [objectPath, setObjectPath] = useState<string | null>(null);
 
-  // Queries/Mutations
   const { data: platforms = [] } = useListPlatforms();
   const requestUploadUrl = useRequestUploadUrl();
   const createPost = useCreatePost();
@@ -43,11 +39,11 @@ export default function Publish() {
     if (e.target.files && e.target.files[0]) {
       const selected = e.target.files[0];
       if (!selected.type.startsWith('video/')) {
-        toast({ title: "Invalid file", description: "Please select a video file", variant: "destructive" });
+        toast({ title: "Arquivo inválido", description: "Por favor, selecione um arquivo de vídeo", variant: "destructive" });
         return;
       }
       setFile(selected);
-      setObjectPath(null); // Reset object path if new file
+      setObjectPath(null);
       setUploadProgress(0);
     }
   };
@@ -61,7 +57,7 @@ export default function Publish() {
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const selected = e.dataTransfer.files[0];
       if (!selected.type.startsWith('video/')) {
-        toast({ title: "Invalid file", description: "Please drop a video file", variant: "destructive" });
+        toast({ title: "Arquivo inválido", description: "Por favor, solte um arquivo de vídeo", variant: "destructive" });
         return;
       }
       setFile(selected);
@@ -72,12 +68,11 @@ export default function Publish() {
 
   const performUpload = async (): Promise<string | null> => {
     if (!file) return null;
-    if (objectPath) return objectPath; // Already uploaded
+    if (objectPath) return objectPath;
 
     setIsUploading(true);
     setUploadProgress(10);
     try {
-      // 1. Get presigned URL
       const { uploadURL, objectPath: path } = await requestUploadUrl.mutateAsync({
         data: {
           name: file.name,
@@ -87,12 +82,11 @@ export default function Publish() {
       });
       setUploadProgress(30);
 
-      // 2. PUT file directly to GCS
       const xhr = new XMLHttpRequest();
       await new Promise((resolve, reject) => {
         xhr.upload.addEventListener("progress", (event) => {
           if (event.lengthComputable) {
-            const percentComplete = (event.loaded / event.total) * 70; // 30% to 100%
+            const percentComplete = (event.loaded / event.total) * 70;
             setUploadProgress(30 + percentComplete);
           }
         });
@@ -100,10 +94,10 @@ export default function Publish() {
           if (xhr.status >= 200 && xhr.status < 300) {
             resolve(xhr.response);
           } else {
-            reject(new Error(`Upload failed with status ${xhr.status}`));
+            reject(new Error(`Falha no upload com status ${xhr.status}`));
           }
         });
-        xhr.addEventListener("error", () => reject(new Error("Upload failed")));
+        xhr.addEventListener("error", () => reject(new Error("Falha no upload")));
         xhr.open("PUT", uploadURL);
         xhr.setRequestHeader("Content-Type", file.type);
         xhr.send(file);
@@ -115,8 +109,8 @@ export default function Publish() {
     } catch (err) {
       console.error(err);
       toast({
-        title: "Upload Failed",
-        description: "Could not upload the video file.",
+        title: "Falha no Upload",
+        description: "Não foi possível enviar o arquivo de vídeo.",
         variant: "destructive"
       });
       setIsUploading(false);
@@ -129,7 +123,7 @@ export default function Publish() {
     if (!isFormValid) return;
 
     try {
-      setIsUploading(true); // Disable form
+      setIsUploading(true);
       let finalObjectPath = objectPath;
       if (file && !finalObjectPath) {
         finalObjectPath = await performUpload();
@@ -146,15 +140,15 @@ export default function Publish() {
       });
 
       toast({
-        title: "Success",
-        description: "Post created successfully.",
+        title: "Post criado!",
+        description: "Post criado com sucesso.",
       });
       setLocation("/posts");
     } catch (err) {
       console.error(err);
       toast({
-        title: "Error",
-        description: "Failed to create post.",
+        title: "Erro",
+        description: "Falha ao criar o post.",
         variant: "destructive"
       });
       setIsUploading(false);
@@ -173,13 +167,12 @@ export default function Publish() {
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-4xl mx-auto">
       <div>
         <h1 className="text-3xl font-extrabold tracking-tight text-white mb-1 flex items-center gap-3">
-          <UploadCloud className="text-primary" /> Create Blast
+          <UploadCloud className="text-primary" /> Nova Publicação
         </h1>
-        <p className="text-muted-foreground">Upload your video and orchestrate its distribution.</p>
+        <p className="text-muted-foreground">Envie seu vídeo e orquestre sua distribuição.</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Video Upload Area */}
         <Card className="bg-card border-border/50 border-2 overflow-hidden shadow-lg">
           <div 
             className={`p-10 border-2 border-dashed rounded-xl m-4 transition-all duration-200 flex flex-col items-center justify-center min-h-[300px] text-center cursor-pointer ${
@@ -210,7 +203,7 @@ export default function Publish() {
                 {isUploading && (
                   <div className="space-y-2 mt-6">
                     <div className="flex justify-between text-xs font-medium">
-                      <span className="text-primary">Uploading...</span>
+                      <span className="text-primary">Enviando...</span>
                       <span className="text-white">{Math.round(uploadProgress)}%</span>
                     </div>
                     <Progress value={uploadProgress} className="h-2 bg-muted/50 [&>div]:bg-primary" />
@@ -219,12 +212,12 @@ export default function Publish() {
                 
                 {!isUploading && !objectPath && (
                   <Button type="button" variant="outline" size="sm" className="mt-4 border-border hover:bg-muted" onClick={(e) => { e.stopPropagation(); setFile(null); }}>
-                    Remove
+                    Remover
                   </Button>
                 )}
                 {objectPath && !isUploading && (
                   <div className="inline-flex items-center gap-2 text-green-400 bg-green-400/10 px-3 py-1 rounded-full text-sm font-medium mt-4 border border-green-400/20">
-                    <Sparkles size={14} /> Upload Complete
+                    <Sparkles size={14} /> Upload Concluído
                   </div>
                 )}
               </div>
@@ -234,11 +227,11 @@ export default function Publish() {
                   <UploadCloud size={40} />
                 </div>
                 <div>
-                  <p className="text-white font-bold text-xl mb-2">Drag & Drop your video</p>
-                  <p className="text-muted-foreground">or click to browse from your computer</p>
+                  <p className="text-white font-bold text-xl mb-2">Arraste e solte seu vídeo</p>
+                  <p className="text-muted-foreground">ou clique para selecionar do seu computador</p>
                 </div>
                 <p className="text-xs text-muted-foreground max-w-[250px] mx-auto mt-4">
-                  Supports MP4, MOV. Max size 2GB. Vertical format (9:16) recommended for Shorts/Reels/TikTok.
+                  Suporta MP4, MOV. Tamanho máximo 2GB. Formato vertical (9:16) recomendado para Shorts/Reels/TikTok.
                 </p>
               </div>
             )}
@@ -249,15 +242,15 @@ export default function Publish() {
           <div className="md:col-span-2 space-y-6">
             <Card className="bg-card border-border/50 shadow-lg">
               <CardHeader>
-                <CardTitle className="text-white">Content Details</CardTitle>
-                <CardDescription>This will be used across all platforms</CardDescription>
+                <CardTitle className="text-white">Detalhes do Conteúdo</CardTitle>
+                <CardDescription>Será usado em todas as plataformas</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="title" className="text-white">Title</Label>
+                  <Label htmlFor="title" className="text-white">Título</Label>
                   <Input 
                     id="title" 
-                    placeholder="E.g., My Awesome Video" 
+                    placeholder="Ex.: Meu Vídeo Incrível" 
                     value={title}
                     onChange={e => setTitle(e.target.value)}
                     disabled={isUploading}
@@ -265,10 +258,10 @@ export default function Publish() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="caption" className="text-white">Caption & Tags</Label>
+                  <Label htmlFor="caption" className="text-white">Legenda e Hashtags</Label>
                   <Textarea 
                     id="caption" 
-                    placeholder="Write a compelling caption and add #hashtags..." 
+                    placeholder="Escreva uma legenda e adicione #hashtags..." 
                     value={caption}
                     onChange={e => setCaption(e.target.value)}
                     disabled={isUploading}
@@ -282,15 +275,15 @@ export default function Publish() {
           <div className="space-y-6">
             <Card className="bg-card border-border/50 shadow-lg">
               <CardHeader className="pb-3">
-                <CardTitle className="text-white text-lg">Distribution</CardTitle>
+                <CardTitle className="text-white text-lg">Distribuição</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 {connectedPlatforms.length === 0 ? (
                   <Alert className="bg-destructive/10 border-destructive/20 text-destructive mb-4">
                     <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>No platforms</AlertTitle>
+                    <AlertTitle>Nenhuma plataforma</AlertTitle>
                     <AlertDescription className="text-xs mt-1">
-                      Connect platforms in settings first.
+                      Conecte plataformas nas configurações primeiro.
                     </AlertDescription>
                   </Alert>
                 ) : (
@@ -312,7 +305,7 @@ export default function Publish() {
                             {p.platform}
                           </label>
                           <p className="text-xs text-muted-foreground">
-                            {p.accountName || 'Connected account'}
+                            {p.accountName || 'Conta conectada'}
                           </p>
                         </div>
                       </div>
@@ -324,7 +317,7 @@ export default function Publish() {
 
             <Card className="bg-card border-border/50 shadow-lg">
               <CardHeader className="pb-3">
-                <CardTitle className="text-white text-lg">Timing</CardTitle>
+                <CardTitle className="text-white text-lg">Agendamento</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center space-x-2 mb-4">
@@ -335,7 +328,7 @@ export default function Publish() {
                     disabled={isUploading}
                   />
                   <label htmlFor="schedule" className="text-sm font-medium text-white cursor-pointer">
-                    Schedule for later
+                    Agendar para depois
                   </label>
                 </div>
                 
@@ -359,11 +352,11 @@ export default function Publish() {
                   className="w-full h-12 text-base font-bold bg-primary hover:bg-primary/90 text-white shadow-[0_0_20px_rgba(124,58,237,0.4)] disabled:shadow-none"
                 >
                   {isUploading ? (
-                    <><RefreshCw className="mr-2 h-5 w-5 animate-spin" /> Processing...</>
+                    <><RefreshCw className="mr-2 h-5 w-5 animate-spin" /> Processando...</>
                   ) : isScheduled ? (
-                    <><CalendarIcon className="mr-2 h-5 w-5" /> Schedule Blast</>
+                    <><CalendarIcon className="mr-2 h-5 w-5" /> Agendar Publicação</>
                   ) : (
-                    <><Send className="mr-2 h-5 w-5" /> Publish Now</>
+                    <><Send className="mr-2 h-5 w-5" /> Publicar Agora</>
                   )}
                 </Button>
               </CardFooter>

@@ -13,13 +13,13 @@ import {
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/publish", label: "Publish", icon: UploadCloud },
+  { href: "/dashboard", label: "Painel", icon: LayoutDashboard },
+  { href: "/publish", label: "Publicar", icon: UploadCloud },
   { href: "/posts", label: "Posts", icon: ListVideo },
-  { href: "/calendar", label: "Calendar", icon: CalendarDays },
-  { href: "/ideas", label: "Ideas", icon: Lightbulb },
-  { href: "/assets", label: "Assets", icon: FolderOpen },
-  { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/calendar", label: "Calendário", icon: CalendarDays },
+  { href: "/ideas", label: "Ideias", icon: Lightbulb },
+  { href: "/assets", label: "Arquivos", icon: FolderOpen },
+  { href: "/settings", label: "Configurações", icon: Settings },
 ];
 
 export function Sidebar() {
@@ -70,7 +70,7 @@ export function Sidebar() {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-sidebar-foreground truncate">
-              {user?.fullName || "Creator"}
+              {user?.fullName || "Criador"}
             </p>
             <p className="text-xs text-sidebar-foreground/50 truncate">
               {user?.primaryEmailAddress?.emailAddress}
@@ -82,7 +82,7 @@ export function Sidebar() {
           className="flex items-center gap-3 w-full px-3 py-2.5 rounded-md text-sm font-medium text-sidebar-foreground/70 hover:bg-destructive/10 hover:text-destructive transition-colors"
         >
           <LogOut size={18} />
-          Sign Out
+          Sair
         </button>
       </div>
     </aside>

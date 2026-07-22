@@ -1,8 +1,9 @@
 import { useListAssets, useDeleteAsset } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FolderOpen, FileVideo, Image as ImageIcon, Trash2, File as FileIcon, Download, ExternalLink } from "lucide-react";
+import { FolderOpen, FileVideo, Image as ImageIcon, Trash2, File as FileIcon, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -12,13 +13,13 @@ export default function Assets() {
   const { toast } = useToast();
 
   const handleDelete = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this asset?")) return;
+    if (!confirm("Tem certeza que deseja excluir este arquivo?")) return;
     try {
       await deleteAsset.mutateAsync({ id });
-      toast({ title: "Asset deleted" });
+      toast({ title: "Arquivo excluído" });
       refetch();
     } catch (e) {
-      toast({ title: "Failed to delete", variant: "destructive" });
+      toast({ title: "Falha ao excluir", variant: "destructive" });
     }
   };
 
@@ -40,9 +41,9 @@ export default function Assets() {
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div>
         <h1 className="text-3xl font-extrabold tracking-tight text-white mb-1 flex items-center gap-3">
-          <FolderOpen className="text-primary" /> Media Library
+          <FolderOpen className="text-primary" /> Biblioteca de Mídia
         </h1>
-        <p className="text-muted-foreground">All your raw files, ready to deploy.</p>
+        <p className="text-muted-foreground">Todos os seus arquivos, prontos para usar.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -61,8 +62,8 @@ export default function Assets() {
         ) : assets.length === 0 ? (
           <div className="col-span-full text-center py-20 border border-border/50 border-dashed rounded-xl bg-card/30">
             <FolderOpen size={48} className="mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-xl font-bold text-white mb-2">Library is empty</h3>
-            <p className="text-muted-foreground">Files you upload for blasts will appear here.</p>
+            <h3 className="text-xl font-bold text-white mb-2">Biblioteca vazia</h3>
+            <p className="text-muted-foreground">Os arquivos que você enviar para publicações aparecerão aqui.</p>
           </div>
         ) : (
           assets.map(asset => (
@@ -76,12 +77,12 @@ export default function Assets() {
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <span>{formatSize(asset.size)}</span>
                     <span>•</span>
-                    <span>{format(new Date(asset.createdAt), "MMM d, yyyy")}</span>
+                    <span>{format(new Date(asset.createdAt), "d 'de' MMM, yyyy", { locale: ptBR })}</span>
                   </div>
                   <div className="flex gap-2 mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
                     <Button variant="outline" size="sm" className="h-7 text-xs border-border bg-transparent hover:bg-muted" asChild>
                       <a href={`/api/storage${asset.objectPath}`} target="_blank" rel="noreferrer">
-                        <ExternalLink size={12} className="mr-1" /> View
+                        <ExternalLink size={12} className="mr-1" /> Visualizar
                       </a>
                     </Button>
                     <Button 

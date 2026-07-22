@@ -1,18 +1,18 @@
 import { useListPosts } from "@workspace/api-client-react";
 import { CalendarDays, Video } from "lucide-react";
 import { format, startOfWeek, addDays, getMonth, isSameDay } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Calendar() {
   const { data: posts = [], isLoading } = useListPosts();
   
-  // Basic month view rendering
   const today = new Date();
   const startDate = startOfWeek(new Date(today.getFullYear(), today.getMonth(), 1));
   
   const days = [];
-  for (let i = 0; i < 35; i++) { // 5 weeks
+  for (let i = 0; i < 35; i++) {
     days.push(addDays(startDate, i));
   }
 
@@ -27,22 +27,20 @@ export default function Calendar() {
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 h-full flex flex-col">
       <div>
         <h1 className="text-3xl font-extrabold tracking-tight text-white mb-1 flex items-center gap-3">
-          <CalendarDays className="text-cyan-400" /> Broadcast Schedule
+          <CalendarDays className="text-cyan-400" /> Agenda de Publicações
         </h1>
-        <p className="text-muted-foreground">{format(today, "MMMM yyyy")}</p>
+        <p className="text-muted-foreground capitalize">{format(today, "MMMM 'de' yyyy", { locale: ptBR })}</p>
       </div>
 
       <Card className="flex-1 bg-card border-border/50 overflow-hidden flex flex-col shadow-lg">
-        {/* Days of week header */}
         <div className="grid grid-cols-7 border-b border-border/50 bg-muted/30">
-          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+          {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(day => (
             <div key={day} className="p-3 text-center text-sm font-bold text-muted-foreground uppercase tracking-wider">
               {day}
             </div>
           ))}
         </div>
         
-        {/* Calendar grid */}
         <div className="grid grid-cols-7 flex-1 min-h-[600px]">
           {isLoading ? (
             [...Array(35)].map((_, i) => (

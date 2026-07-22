@@ -166,14 +166,14 @@ function ClerkProviderWithRoutes() {
       localization={{
         signIn: {
           start: {
-            title: "Welcome to VexelHub",
-            subtitle: "Sign in to access your command center",
+            title: "Bem-vindo ao VexelHub",
+            subtitle: "Entre para acessar seu centro de comando",
           },
         },
         signUp: {
           start: {
-            title: "Join VexelHub",
-            subtitle: "Start publishing everywhere",
+            title: "Crie sua conta",
+            subtitle: "Comece a publicar em todo lugar",
           },
         },
       }}

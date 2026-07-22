@@ -3,13 +3,21 @@ import { useListPosts, useDeletePost, usePublishPost } from "@workspace/api-clie
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ListVideo, Trash2, CalendarIcon, Play, RefreshCw, AlertCircle, FileVideo, MoreVertical, Send } from "lucide-react";
+import { ListVideo, Trash2, CalendarIcon, Play, AlertCircle, FileVideo, MoreVertical, Send } from "lucide-react";
 import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ListPostsStatus } from "@workspace/api-client-react";
+
+const STATUS_LABELS: Record<string, string> = {
+  draft: "RASCUNHO",
+  scheduled: "AGENDADO",
+  published: "PUBLICADO",
+  failed: "FALHOU",
+};
 
 export default function Posts() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -21,23 +29,23 @@ export default function Posts() {
   const { toast } = useToast();
 
   const handleDelete = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this post?")) return;
+    if (!confirm("Tem certeza que deseja excluir este post?")) return;
     try {
       await deletePost.mutateAsync({ id });
-      toast({ title: "Post deleted" });
+      toast({ title: "Post excluído" });
       refetch();
     } catch (e) {
-      toast({ title: "Failed to delete", variant: "destructive" });
+      toast({ title: "Falha ao excluir", variant: "destructive" });
     }
   };
 
   const handlePublish = async (id: number) => {
     try {
       await publishPost.mutateAsync({ id });
-      toast({ title: "Publishing initiated", description: "Your post is being sent to platforms." });
+      toast({ title: "Publicação iniciada", description: "Seu post está sendo enviado às plataformas." });
       refetch();
     } catch (e) {
-      toast({ title: "Failed to publish", variant: "destructive" });
+      toast({ title: "Falha ao publicar", variant: "destructive" });
     }
   };
 
@@ -53,22 +61,22 @@ export default function Posts() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight text-white mb-1 flex items-center gap-3">
-            <ListVideo className="text-primary" /> Content Library
+            <ListVideo className="text-primary" /> Biblioteca de Conteúdo
           </h1>
-          <p className="text-muted-foreground">Manage your past broadcasts and scheduled blasts.</p>
+          <p className="text-muted-foreground">Gerencie seus posts publicados e agendamentos.</p>
         </div>
         
-        <div className="w-[180px]">
+        <div className="w-[200px]">
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="bg-card border-border/50 text-white">
-              <SelectValue placeholder="Filter by status" />
+              <SelectValue placeholder="Filtrar por status" />
             </SelectTrigger>
             <SelectContent className="bg-card border-border/50">
-              <SelectItem value="all">All Posts</SelectItem>
-              <SelectItem value="published">Published</SelectItem>
-              <SelectItem value="scheduled">Scheduled</SelectItem>
-              <SelectItem value="draft">Drafts</SelectItem>
-              <SelectItem value="failed">Failed</SelectItem>
+              <SelectItem value="all">Todos os Posts</SelectItem>
+              <SelectItem value="published">Publicados</SelectItem>
+              <SelectItem value="scheduled">Agendados</SelectItem>
+              <SelectItem value="draft">Rascunhos</SelectItem>
+              <SelectItem value="failed">Com Falha</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -90,8 +98,8 @@ export default function Posts() {
         ) : posts.length === 0 ? (
           <div className="text-center py-20 border border-border/50 border-dashed rounded-xl bg-card/30">
             <ListVideo size={48} className="mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-xl font-bold text-white mb-2">No posts found</h3>
-            <p className="text-muted-foreground">Try changing your filter or create a new post.</p>
+            <h3 className="text-xl font-bold text-white mb-2">Nenhum post encontrado</h3>
+            <p className="text-muted-foreground">Tente mudar o filtro ou crie um novo post.</p>
           </div>
         ) : (
           posts.map(post => (
@@ -104,8 +112,8 @@ export default function Posts() {
                     <FileVideo size={32} className="text-muted-foreground" />
                   )}
                   <div className="absolute top-2 left-2">
-                    <Badge variant="outline" className={`${statusColors[post.status]} font-bold`}>
-                      {post.status.toUpperCase()}
+                    <Badge variant="outline" className={`${statusColors[post.status as keyof typeof statusColors]} font-bold`}>
+                      {STATUS_LABELS[post.status] ?? post.status.toUpperCase()}
                     </Badge>
                   </div>
                 </div>
@@ -115,7 +123,7 @@ export default function Posts() {
                     <div className="min-w-0">
                       <h3 className="text-xl font-bold text-white mb-2 truncate" title={post.title}>{post.title}</h3>
                       <p className="text-sm text-muted-foreground line-clamp-2 mb-4 leading-relaxed">
-                        {post.caption || "No caption provided."}
+                        {post.caption || "Nenhuma legenda fornecida."}
                       </p>
                     </div>
                     
@@ -128,11 +136,11 @@ export default function Posts() {
                       <DropdownMenuContent align="end" className="bg-popover border-border/50">
                         {(post.status === "draft" || post.status === "scheduled" || post.status === "failed") && (
                           <DropdownMenuItem className="cursor-pointer text-white focus:bg-primary/20" onClick={() => handlePublish(post.id)}>
-                            <Send className="mr-2 h-4 w-4 text-primary" /> Publish Now
+                            <Send className="mr-2 h-4 w-4 text-primary" /> Publicar Agora
                           </DropdownMenuItem>
                         )}
                         <DropdownMenuItem className="cursor-pointer text-destructive focus:bg-destructive/20 focus:text-destructive" onClick={() => handleDelete(post.id)}>
-                          <Trash2 className="mr-2 h-4 w-4" /> Delete Post
+                          <Trash2 className="mr-2 h-4 w-4" /> Excluir Post
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -143,12 +151,11 @@ export default function Posts() {
                       {post.scheduledAt && (
                         <div className="flex items-center gap-1.5 text-cyan-400 bg-cyan-500/10 px-2 py-1 rounded-md">
                           <CalendarIcon size={14} />
-                          {format(new Date(post.scheduledAt), "MMM d, h:mm a")}
+                          {format(new Date(post.scheduledAt), "d 'de' MMM, HH:mm", { locale: ptBR })}
                         </div>
                       )}
-                      
                       <div className="flex items-center gap-1.5 text-muted-foreground">
-                        <Play size={14} /> Created {format(new Date(post.createdAt), "MMM d")}
+                        <Play size={14} /> Criado em {format(new Date(post.createdAt), "d 'de' MMM", { locale: ptBR })}
                       </div>
                     </div>
                     
