@@ -1,0 +1,12 @@
+<svg xmlns="http://www.youtube.com/2000/svg" viewBox="0 0 200 60" width="200" height="60">
+  <defs>
+    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7C3AED" />
+      <stop offset="100%" stop-color="#22D3EE" />
+    </linearGradient>
+  </defs>
+  <path d="M 20 15 L 30 45 L 40 15 Z" fill="none" stroke="url(#gradient)" stroke-width="4" stroke-linejoin="round" />
+  <text x="50" y="40" font-family="'Outfit', 'Inter', sans-serif" font-weight="900" font-size="32" fill="#FFFFFF" letter-spacing="-1">
+    Vexel<tspan fill="#7C3AED">Hub</tspan>
+  </text>
+</svg>
