@@ -2,21 +2,26 @@ openapi: 3.1.0
 info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
-  version: 0.1.0
-  description: API specification
+  version: 1.0.0
+  description: VexelHub API – cross-platform social media publishing
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
-    description: Health operations
+  - name: auth
+  - name: platforms
+  - name: posts
+  - name: ideas
+  - name: assets
+  - name: stats
+  - name: storage
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +29,317 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /users/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current authenticated user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthorized
+
+  /platforms:
+    get:
+      operationId: listPlatforms
+      tags: [platforms]
+      summary: List all supported platforms and their connection status
+      responses:
+        "200":
+          description: Platform list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Platform"
+
+  /platforms/{platform}/connect:
+    post:
+      operationId: connectPlatform
+      tags: [platforms]
+      summary: Initiate OAuth connection for a platform
+      parameters:
+        - name: platform
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [youtube, instagram, tiktok]
+      responses:
+        "200":
+          description: OAuth redirect URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OAuthUrl"
+
+  /platforms/{platform}:
+    delete:
+      operationId: disconnectPlatform
+      tags: [platforms]
+      summary: Disconnect a social media platform
+      parameters:
+        - name: platform
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [youtube, instagram, tiktok]
+      responses:
+        "200":
+          description: Disconnected
+
+  /posts:
+    get:
+      operationId: listPosts
+      tags: [posts]
+      summary: List posts with optional status filter
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, scheduled, published, failed]
+      responses:
+        "200":
+          description: Posts list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Post"
+    post:
+      operationId: createPost
+      tags: [posts]
+      summary: Create a new post
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PostInput"
+      responses:
+        "201":
+          description: Created post
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Post"
+
+  /posts/{id}:
+    get:
+      operationId: getPost
+      tags: [posts]
+      summary: Get a post by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Post
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Post"
+    put:
+      operationId: updatePost
+      tags: [posts]
+      summary: Update a post
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PostUpdate"
+      responses:
+        "200":
+          description: Updated post
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Post"
+    delete:
+      operationId: deletePost
+      tags: [posts]
+      summary: Delete a post
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+
+  /posts/{id}/publish:
+    post:
+      operationId: publishPost
+      tags: [posts]
+      summary: Publish a post immediately to all selected platforms
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Publish results per platform
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublishResult"
+
+  /ideas:
+    get:
+      operationId: listIdeas
+      tags: [ideas]
+      summary: List content ideas
+      responses:
+        "200":
+          description: Ideas list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Idea"
+    post:
+      operationId: createIdea
+      tags: [ideas]
+      summary: Create a content idea
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IdeaInput"
+      responses:
+        "201":
+          description: Created idea
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Idea"
+
+  /ideas/{id}:
+    put:
+      operationId: updateIdea
+      tags: [ideas]
+      summary: Update an idea
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IdeaUpdate"
+      responses:
+        "200":
+          description: Updated idea
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Idea"
+    delete:
+      operationId: deleteIdea
+      tags: [ideas]
+      summary: Delete an idea
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+
+  /assets:
+    get:
+      operationId: listAssets
+      tags: [assets]
+      summary: List media assets in the library
+      responses:
+        "200":
+          description: Assets list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Asset"
+
+  /assets/{id}:
+    delete:
+      operationId: deleteAsset
+      tags: [assets]
+      summary: Delete a media asset
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+
+  /stats:
+    get:
+      operationId: getDashboardStats
+      tags: [stats]
+      summary: Get dashboard overview statistics
+      responses:
+        "200":
+          description: Dashboard stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  /storage/uploads/request-url:
+    post:
+      operationId: requestUploadUrl
+      tags: [storage]
+      summary: Request a presigned URL for direct video/asset upload to GCS
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UploadRequest"
+      responses:
+        "200":
+          description: Presigned upload URL and object path
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -31,6 +347,243 @@ components:
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        name:
+          type: ["string", "null"]
+        avatarUrl:
+          type: ["string", "null"]
+      required: [id, email]
+
+    Platform:
+      type: object
+      properties:
+        id:
+          type: integer
+        platform:
+          type: string
+          enum: [youtube, instagram, tiktok]
+        isConnected:
+          type: boolean
+        accountName:
+          type: ["string", "null"]
+        accountId:
+          type: ["string", "null"]
+      required: [id, platform, isConnected]
+
+    OAuthUrl:
+      type: object
+      properties:
+        url:
+          type: string
+      required: [url]
+
+    PlatformResult:
+      type: object
+      properties:
+        platform:
+          type: string
+        status:
+          type: string
+          enum: [pending, success, failed]
+        postUrl:
+          type: ["string", "null"]
+        errorMessage:
+          type: ["string", "null"]
+      required: [platform, status]
+
+    Post:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        caption:
+          type: string
+        videoObjectPath:
+          type: ["string", "null"]
+        thumbnailUrl:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [draft, scheduled, published, failed]
+        platforms:
+          type: array
+          items:
+            type: string
+        scheduledAt:
+          type: ["string", "null"]
+        publishedAt:
+          type: ["string", "null"]
+        platformResults:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlatformResult"
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required: [id, title, caption, status, platforms, platformResults, createdAt, updatedAt]
+
+    PostInput:
+      type: object
+      properties:
+        title:
+          type: string
+        caption:
+          type: string
+        videoObjectPath:
+          type: ["string", "null"]
+        platforms:
+          type: array
+          items:
+            type: string
+        scheduledAt:
+          type: ["string", "null"]
+      required: [title, caption, platforms]
+
+    PostUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        caption:
+          type: string
+        videoObjectPath:
+          type: ["string", "null"]
+        platforms:
+          type: array
+          items:
+            type: string
+        scheduledAt:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [draft, scheduled]
+
+    PublishResult:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlatformResult"
+      required: [results]
+
+    Idea:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        tags:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+      required: [id, title, tags, createdAt]
+
+    IdeaInput:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        tags:
+          type: array
+          items:
+            type: string
+      required: [title]
+
+    IdeaUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        tags:
+          type: array
+          items:
+            type: string
+
+    Asset:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        objectPath:
+          type: string
+        mimeType:
+          type: string
+        size:
+          type: integer
+        createdAt:
+          type: string
+      required: [id, name, objectPath, mimeType, size, createdAt]
+
+    DashboardStats:
+      type: object
+      properties:
+        totalPosts:
+          type: integer
+        publishedPosts:
+          type: integer
+        scheduledPosts:
+          type: integer
+        draftPosts:
+          type: integer
+        connectedPlatforms:
+          type: integer
+        totalAssets:
+          type: integer
+        totalIdeas:
+          type: integer
+        recentPosts:
+          type: array
+          items:
+            $ref: "#/components/schemas/Post"
+      required:
+        - totalPosts
+        - publishedPosts
+        - scheduledPosts
+        - draftPosts
+        - connectedPlatforms
+        - totalAssets
+        - totalIdeas
+        - recentPosts
+
+    UploadRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        size:
+          type: integer
+        contentType:
+          type: string
+      required: [name, size, contentType]
+
+    UploadResponse:
+      type: object
+      properties:
+        uploadURL:
+          type: string
+        objectPath:
+          type: string
+      required: [uploadURL, objectPath]
