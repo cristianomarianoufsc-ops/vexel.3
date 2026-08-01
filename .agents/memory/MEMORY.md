@@ -1,0 +1,1 @@
+- [Clerk proxy on Replit dev](clerk-proxy-replit.md) — remove publishableKeyFromHost + proxyUrl from ClerkProvider in dev; subdomain proxy only works in production
