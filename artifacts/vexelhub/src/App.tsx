@@ -16,6 +16,7 @@ import Calendar from '@/pages/calendar';
 import Ideas from '@/pages/ideas';
 import Assets from '@/pages/assets';
 import Settings from '@/pages/settings';
+import Legal from '@/pages/legal';
 
 const queryClient = new QueryClient();
 
@@ -182,6 +183,8 @@ function ClerkProviderWithRoutes() {
             <Route path="/" component={HomeRedirect} />
             <Route path="/sign-in/*?" component={SignInPage} />
             <Route path="/sign-up/*?" component={SignUpPage} />
+            <Route path="/terms" component={() => <Legal type="terms" />} />
+            <Route path="/privacy" component={() => <Legal type="privacy" />} />
             <Route path="/dashboard" component={() => <ProtectedRoute component={Dashboard} />} />
             <Route path="/publish" component={() => <ProtectedRoute component={Publish} />} />
             <Route path="/posts" component={() => <ProtectedRoute component={Posts} />} />
