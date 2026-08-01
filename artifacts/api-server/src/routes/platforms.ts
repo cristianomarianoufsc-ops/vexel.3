@@ -33,40 +33,8 @@ async function ensurePlatformRows(userId: string) {
   }
 }
 
-async function ensureInstagramConnection(userId: string): Promise<void> {
-  const accessToken = process.env.INSTAGRAM_ACCESS_TOKEN?.trim();
-  if (!accessToken) return;
-
-  const [connection] = await db
-    .select()
-    .from(platformsTable)
-    .where(and(eq(platformsTable.userId, userId), eq(platformsTable.platform, "instagram")))
-    .limit(1);
-
-  if (connection?.isConnected && connection.accountId) return;
-
-  const profile = await getInstagramProfile(accessToken);
-  await db
-    .update(platformsTable)
-    .set({
-      isConnected: true,
-      accountId: profile.accountId,
-      accountName: profile.username,
-      accessToken,
-      refreshToken: null,
-      tokenExpiresAt: null,
-      updatedAt: new Date(),
-    })
-    .where(and(eq(platformsTable.userId, userId), eq(platformsTable.platform, "instagram")));
-}
-
 router.get("/platforms", requireAuth, async (req, res): Promise<void> => {
   await ensurePlatformRows(req.userId);
-  try {
-    await ensureInstagramConnection(req.userId);
-  } catch (error) {
-    console.error("Instagram connection bootstrap failed:", error);
-  }
 
   const platforms = await db
     .select()

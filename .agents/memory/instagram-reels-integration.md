@@ -3,11 +3,11 @@ name: Instagram Reels integration
 description: Meta Instagram Login setup, token roles, and production publishing constraints for VexelHub.
 ---
 
-The Instagram Login flow uses the access token generated for the professional account separately from the Meta app secret. The token belongs in `INSTAGRAM_ACCESS_TOKEN`; the app secret is only used for OAuth token exchange and long-lived token handling.
+The Instagram Login flow uses the access token generated for the professional account separately from the Meta app secret. The token belongs in `INSTAGRAM_ACCESS_TOKEN`; the app secret is only used for OAuth token exchange and long-lived token handling. The production app now stores Instagram connections per authenticated VexelHub user; the server does not bootstrap a global token into new users.
 
 **Why:** Meta's dashboard presents both values near the same setup, and treating them as interchangeable causes authorization failures.
 
-**How to apply:** Never ask for either value in chat or screenshots. Use the secure secrets flow, and keep the current account authorization for `bandaoutcore` as the reference account.
+**How to apply:** Never ask for either value in chat or screenshots. Use the secure secrets flow. Existing authorized users keep their database connection, while new users must complete Instagram OAuth themselves.
 
 Instagram Reels publishing requires Meta to fetch the video from a publicly reachable URL. Supabase Storage signed URLs are used for this; private Replit object URLs and development domains are not suitable for Meta's media fetch.
 
