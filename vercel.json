@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "cd artifacts/vexelhub && pnpm run build",
+  "buildCommand": "PORT=3000 BASE_PATH=/ sh -c 'cd artifacts/vexelhub && pnpm run build'",
   "outputDirectory": "artifacts/vexelhub/dist/public",
   "framework": null,
   "rewrites": [
