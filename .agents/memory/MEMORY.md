@@ -1,1 +1,2 @@
 - [Clerk proxy on Replit dev](clerk-proxy-replit.md) — remove publishableKeyFromHost + proxyUrl from ClerkProvider in dev; subdomain proxy only works in production
+- [Fly monorepo runtime dependencies](fly-monorepo-runtime.md) — Fly images need a production deploy of the API workspace, not the root node_modules
