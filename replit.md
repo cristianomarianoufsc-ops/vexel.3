@@ -1,15 +1,15 @@
-# [Project name]
+# VexelHub
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Hub de publicação de vídeos curtos para YouTube Shorts, Instagram Reels e TikTok.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
+- `pnpm --filter @workspace/api-server run dev` — run the API server (port 8080)
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- Required backend env includes database, Clerk, YouTube, Instagram and Supabase settings. Never commit their values.
 
 ## Stack
 
@@ -22,24 +22,37 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/vexelhub` — React/Vite frontend.
+- `artifacts/api-server` — Express API and platform integrations.
+- `lib/db/src/schema` — Drizzle database schema.
+- `lib/api-zod` — shared API validation/contracts.
+- `PROJECT_HANDOFF.md` — detailed project status, architecture, deployment notes and next steps.
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Frontend stays on Vercel and the API stays on Fly at `https://vexelhub-api.fly.dev`.
+- Clerk `userId` is the tenant boundary for posts, assets and social-platform connections.
+- Supabase signed video URLs are required when Instagram or another external platform must fetch a video.
+- YouTube and Instagram OAuth connections are stored per authenticated user.
+- TikTok has initial OAuth scaffolding but no real publishing flow yet.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+Users authenticate with Clerk, upload short videos, write captions, choose platforms, publish, and view per-platform results. YouTube Shorts and Instagram Reels are implemented; TikTok is the next integration.
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- Preserve the current Vercel/Fly/Clerk/Neon/Supabase architecture unless explicitly asked to migrate it.
+- Keep platform credentials in secure environment secrets, never in Git or chat.
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- Use pnpm, not npm or yarn.
+- Build the API before deploying and prefer `flyctl deploy ... --local-only .` if the Fly remote builder returns registry `401`.
+- Do not restore the old global Instagram-token bootstrap; new users must connect their own Instagram account.
+- Read `PROJECT_HANDOFF.md` before continuing platform integration work.
 
 ## Pointers
 
-- See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
+- See `PROJECT_HANDOFF.md` for the complete handoff.
+- See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.
