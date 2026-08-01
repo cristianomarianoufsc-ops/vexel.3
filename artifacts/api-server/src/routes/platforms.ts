@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { db, platformsTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { requireAuth } from "../middlewares/requireAuth";
+import { getPublicApiUrl, getYouTubeRedirectUri } from "../lib/youtube";
 
 const router: IRouter = Router();
 
@@ -55,15 +56,13 @@ router.post("/platforms/:platform/connect", requireAuth, async (req, res): Promi
   }
 
   // Build the OAuth URL for each platform
-  const baseUrl = process.env.REPLIT_DEV_DOMAIN
-    ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-    : "http://localhost:3000";
+  const baseUrl = getPublicApiUrl();
 
   let url = "";
 
   if (platform === "youtube") {
     const clientId = process.env.YOUTUBE_CLIENT_ID || "";
-    const redirectUri = `${baseUrl}/api/platforms/youtube/callback`;
+    const redirectUri = getYouTubeRedirectUri();
     const scope = "https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly";
     url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&access_type=offline&prompt=consent&state=${req.userId}`;
   } else if (platform === "instagram") {
@@ -96,10 +95,7 @@ router.get("/platforms/youtube/callback", async (req, res): Promise<void> => {
   }
 
   const userId = state;
-  const baseUrl = process.env.REPLIT_DEV_DOMAIN
-    ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-    : "http://localhost:3000";
-  const redirectUri = `${baseUrl}/api/platforms/youtube/callback`;
+    const redirectUri = getYouTubeRedirectUri();
 
   try {
     // Exchange code for tokens
@@ -163,9 +159,9 @@ router.get("/platforms/youtube/callback", async (req, res): Promise<void> => {
       .where(and(eq(platformsTable.userId, userId), eq(platformsTable.platform, "youtube")));
 
     // Redirect back to frontend settings page
-    const frontendUrl = process.env.REPLIT_DEV_DOMAIN
-      ? `https://${process.env.REPLIT_DEV_DOMAIN}/settings`
-      : "http://localhost:5173/settings";
+    const frontendUrl = process.env.PUBLIC_FRONTEND_URL
+      ? `${process.env.PUBLIC_FRONTEND_URL.replace(/\/+$/, "")}/settings`
+      : "https://vexel-2.vercel.app/settings";
     res.redirect(frontendUrl);
   } catch (err) {
     console.error("YouTube callback error:", err);

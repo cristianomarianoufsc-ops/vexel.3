@@ -7,6 +7,8 @@ import {
   UpdatePostBody,
   ListPostsQueryParams,
 } from "@workspace/api-zod";
+import { downloadObject } from "../lib/storageProvider";
+import { getUsableYouTubeAccessToken, uploadVideoToYouTube } from "../lib/youtube";
 
 const router: IRouter = Router();
 
@@ -208,15 +210,40 @@ router.post("/posts/:id/publish", requireAuth, async (req, res): Promise<void> =
       continue;
     }
 
-    // Attempt to publish — real API calls would go here
-    // For now we mark as success if connected (actual upload logic requires API keys)
     try {
-      // Real implementation would call YouTube API, Instagram Graph API, TikTok API here
-      // using connection.accessToken and the video from post.videoObjectPath
+      if (platform !== "youtube") {
+        throw new Error(`Publicação em ${platform} ainda não está configurada.`);
+      }
+      if (!post.videoObjectPath) {
+        throw new Error("O post não possui um vídeo enviado.");
+      }
+
+      const { buffer, contentType } = await downloadObject(post.videoObjectPath);
+      const token = await getUsableYouTubeAccessToken(connection);
+      const uploaded = await uploadVideoToYouTube({
+        accessToken: token.accessToken,
+        title: post.title,
+        description: post.caption,
+        video: buffer,
+        contentType: contentType || "video/mp4",
+      });
+
+      if (token.refreshed) {
+        await db
+          .update(platformsTable)
+          .set({
+            accessToken: token.accessToken,
+            refreshToken: token.refreshToken,
+            tokenExpiresAt: token.expiresAt,
+            updatedAt: new Date(),
+          })
+          .where(eq(platformsTable.id, connection.id));
+      }
+
       results.push({
         platform,
         status: "success",
-        postUrl: null,
+        postUrl: uploaded.url,
         errorMessage: null,
       });
     } catch (err: unknown) {
@@ -231,7 +258,7 @@ router.post("/posts/:id/publish", requireAuth, async (req, res): Promise<void> =
 
   const allSuccess = results.every((r) => r.status === "success");
   const anySuccess = results.some((r) => r.status === "success");
-  const newStatus = allSuccess ? "published" : anySuccess ? "published" : "failed";
+  const newStatus = allSuccess && anySuccess ? "published" : "failed";
 
   await db
     .update(postsTable)
