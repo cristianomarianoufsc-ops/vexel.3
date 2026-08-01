@@ -7,8 +7,9 @@ import {
   UpdatePostBody,
   ListPostsQueryParams,
 } from "@workspace/api-zod";
-import { downloadObject } from "../lib/storageProvider";
+import { downloadObject, getPublicUrl } from "../lib/storageProvider";
 import { getUsableYouTubeAccessToken, uploadVideoToYouTube } from "../lib/youtube";
+import { uploadInstagramReel } from "../lib/instagram";
 
 const router: IRouter = Router();
 
@@ -211,41 +212,68 @@ router.post("/posts/:id/publish", requireAuth, async (req, res): Promise<void> =
     }
 
     try {
-      if (platform !== "youtube") {
-        throw new Error(`Publicação em ${platform} ainda não está configurada.`);
-      }
       if (!post.videoObjectPath) {
         throw new Error("O post não possui um vídeo enviado.");
       }
 
-      const { buffer, contentType } = await downloadObject(post.videoObjectPath);
-      const token = await getUsableYouTubeAccessToken(connection);
-      const uploaded = await uploadVideoToYouTube({
-        accessToken: token.accessToken,
-        title: post.title,
-        description: post.caption,
-        video: buffer,
-        contentType: contentType || "video/mp4",
-      });
+      if (platform === "youtube") {
+        const { buffer, contentType } = await downloadObject(post.videoObjectPath);
+        const token = await getUsableYouTubeAccessToken(connection);
+        const uploaded = await uploadVideoToYouTube({
+          accessToken: token.accessToken,
+          title: post.title,
+          description: post.caption,
+          video: buffer,
+          contentType: contentType || "video/mp4",
+        });
 
-      if (token.refreshed) {
-        await db
-          .update(platformsTable)
-          .set({
-            accessToken: token.accessToken,
-            refreshToken: token.refreshToken,
-            tokenExpiresAt: token.expiresAt,
-            updatedAt: new Date(),
-          })
-          .where(eq(platformsTable.id, connection.id));
+        if (token.refreshed) {
+          await db
+            .update(platformsTable)
+            .set({
+              accessToken: token.accessToken,
+              refreshToken: token.refreshToken,
+              tokenExpiresAt: token.expiresAt,
+              updatedAt: new Date(),
+            })
+            .where(eq(platformsTable.id, connection.id));
+        }
+
+        results.push({
+          platform,
+          status: "success",
+          postUrl: uploaded.url,
+          errorMessage: null,
+        });
+      } else if (platform === "instagram") {
+        if (!connection.accessToken || !connection.accountId) {
+          throw new Error("A conexão do Instagram não possui token ou ID de conta.");
+        }
+        const videoUrl = await getPublicUrl(post.videoObjectPath);
+        if (
+          videoUrl.includes("/api/storage/objects/") ||
+          videoUrl.includes(".replit.dev") ||
+          videoUrl.includes("localhost")
+        ) {
+          throw new Error(
+            "O vídeo precisa estar em uma URL pública para o Instagram. Configure o armazenamento Supabase antes de publicar.",
+          );
+        }
+        const uploaded = await uploadInstagramReel({
+          accountId: connection.accountId,
+          accessToken: connection.accessToken,
+          videoUrl,
+          caption: post.caption,
+        });
+        results.push({
+          platform,
+          status: "success",
+          postUrl: uploaded.url,
+          errorMessage: null,
+        });
+      } else {
+        throw new Error(`Publicação em ${platform} ainda não está configurada.`);
       }
-
-      results.push({
-        platform,
-        status: "success",
-        postUrl: uploaded.url,
-        errorMessage: null,
-      });
     } catch (err: unknown) {
       results.push({
         platform,
