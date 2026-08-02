@@ -2,3 +2,4 @@
 - [Fly monorepo runtime dependencies](fly-monorepo-runtime.md) — Fly images need a production deploy of the API workspace, not the root node_modules
 - [Instagram Reels integration](instagram-reels-integration.md) — token/app secret are separate; Reels need public media URLs and Fly may require local-only deploys
 - [Vercel repository link](vercel-repository-link.md) — compare Vercel's linked GitHub repository with the workspace origin when pushes do not trigger deployments
+- [Git remote push](git-remote-push.md) — git push falha por históricos divergentes; usar curl + GITHUB_TOKEN via API REST do GitHub para atualizar arquivos
