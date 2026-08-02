@@ -1,5 +1,3 @@
-- [Clerk proxy on Replit dev](clerk-proxy-replit.md) — remove publishableKeyFromHost + proxyUrl from ClerkProvider in dev; subdomain proxy only works in production
-- [Fly monorepo runtime dependencies](fly-monorepo-runtime.md) — Fly images need a production deploy of the API workspace, not the root node_modules
-- [Instagram Reels integration](instagram-reels-integration.md) — token/app secret are separate; Reels need public media URLs and Fly may require local-only deploys
-- [Vercel repository link](vercel-repository-link.md) — compare Vercel's linked GitHub repository with the workspace origin when pushes do not trigger deployments
-- [Git remote push](git-remote-push.md) — git push falha por históricos divergentes; usar curl + GITHUB_TOKEN via API REST do GitHub para atualizar arquivos
+- [Secrets do backend Fly](fly-secrets.md) — os secrets do app publicado no Fly são independentes dos secrets salvos neste Repl.
+- [TikTok Content Posting](tiktok-content-posting.md) — OAuth usa resposta direta e o Direct Post exige creator info, upload binário em partes e status assíncrono.
+- [OpenAPI codegen e Zod](openapi-codegen-zod.md) — o Orval instalado pode gerar zod.int(), incompatível com o Zod usado; validar e não commitar essa saída.
