@@ -175,42 +175,26 @@ O endpoint:
 3. Publica em cada plataforma selecionada.
 4. Salva `status`, `publishedAt` e `platformResults`.
 
-O TikTok atualmente cai no erro:
-
-```text
-Publicação em tiktok ainda não está configurada.
-```
-
 O status e a mensagem de erro de cada plataforma devem continuar sendo preservados mesmo quando apenas uma plataforma falhar.
 
 ## 9. O que falta para o TikTok
 
 O próximo objetivo é implementar publicação real no TikTok, por usuário.
 
-Já existe um início de URL OAuth em `artifacts/api-server/src/routes/platforms.ts` usando:
+O OAuth e a publicação real foram implementados em `artifacts/api-server/src/routes/platforms.ts`, `artifacts/api-server/src/lib/tiktok.ts` e `artifacts/api-server/src/routes/posts.ts`. O fluxo usa:
 
 - `TIKTOK_CLIENT_KEY`
-- callback pretendido em `/api/platforms/tiktok/callback`
-- scopes atuais no código: `user.info.basic,video.publish`
+- callback em `/api/platforms/tiktok/callback`;
+- scopes `user.info.basic`, `video.publish` e `video.upload`;
+- renovação de access token via refresh token;
+- consulta de `creator_info/query` para respeitar as opções de privacidade da conta;
+- Content Posting API Direct Post com `FILE_UPLOAD`, upload binário em partes e consulta assíncrona de status;
+- seleção padrão de privacidade `SELF_ONLY`, necessária para clientes Sandbox/não auditados; `TIKTOK_DEFAULT_PRIVACY` pode sobrescrever isso para uma conta auditada;
+- gravação do `publish_id`, status e mensagem de erro em `platformResults`.
 
-Ainda falta:
+O app TikTok Sandbox usado no teste precisa continuar configurado com Login Kit Web, a conta de teste autorizada, a redirect URI pública `https://vexelhub-api.fly.dev/api/platforms/tiktok/callback`, os três scopes acima e Direct Post habilitado. A publicação deve ser validada com um vídeo pequeno no Sandbox antes de trocar para Produção.
 
-1. Criar/configurar o app TikTok Developer e confirmar quais produtos, scopes e requisitos estão disponíveis para a conta.
-2. Configurar a redirect URI pública:
-   - `https://vexelhub-api.fly.dev/api/platforms/tiktok/callback`
-3. Adicionar os secrets do TikTok pelo fluxo seguro; nunca commitar valores.
-4. Implementar o callback OAuth e salvar access token, refresh token, `accountId`, nome e expiração na linha do usuário.
-5. Criar um helper dedicado, por exemplo `artifacts/api-server/src/lib/tiktok.ts`.
-6. Implementar renovação do token quando a API exigir.
-7. Implementar o fluxo de Content Posting API conforme a documentação atual do TikTok:
-   - confirmar se o produto permite upload por URL ou exige upload binário;
-   - respeitar regras de vídeo, privacidade, revisão e publicação;
-   - tratar publicação assíncrona e consultar status quando necessário.
-8. Substituir o branch de erro do TikTok em `posts.ts` por publicação real.
-9. Salvar URL/ID/status em `platformResults`.
-10. Testar com um vídeo pequeno em uma conta TikTok de teste antes de publicar em produção.
-
-Não assumir que o fluxo do Instagram pode ser copiado literalmente. A API do TikTok tem requisitos próprios de aprovação, scopes, publicação e formato de upload; confirme a documentação oficial atual antes de escolher o endpoint final.
+Não assumir que o fluxo do Instagram pode ser copiado literalmente. A API do TikTok tem requisitos próprios de aprovação, scopes, publicação e formato de upload; o helper dedicado segue a documentação oficial atual.
 
 ## 10. Deploy do backend no Fly
 

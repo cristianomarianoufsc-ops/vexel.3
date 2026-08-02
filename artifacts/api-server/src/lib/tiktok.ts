@@ -270,6 +270,10 @@ export async function getTikTokProfile(accessToken: string): Promise<{
 function choosePrivacyLevel(options: string[]): string {
   const configured = process.env.TIKTOK_DEFAULT_PRIVACY?.trim();
   if (configured && options.includes(configured)) return configured;
+  // TikTok clients that have not completed audit are only allowed to
+  // publish privately. Prefer SELF_ONLY by default so Sandbox publishing
+  // works without requiring a production-only environment override.
+  if (options.includes("SELF_ONLY")) return "SELF_ONLY";
   if (options.includes("PUBLIC_TO_EVERYONE")) return "PUBLIC_TO_EVERYONE";
   if (options.length > 0) return options[0];
   throw new Error(
