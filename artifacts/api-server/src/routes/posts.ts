@@ -203,19 +203,38 @@ router.post("/posts/:id/publish", requireAuth, async (req, res): Promise<void> =
     postId: string | null;
     postUrl: string | null;
     errorMessage: string | null;
-  }> = [];
+  }> = platforms.map((platform) => ({
+    platform,
+    status: "pending",
+    postId: null,
+    postUrl: null,
+    errorMessage: null,
+  }));
 
-  for (const platform of platforms) {
+  const saveProgress = async () => {
+    await db
+      .update(postsTable)
+      .set({
+        platformResults: results,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(postsTable.id, id), eq(postsTable.userId, req.userId)));
+  };
+
+  // Persist the initial state before any external upload starts so the UI can
+  // show a real progress indicator while this request is still running.
+  await saveProgress();
+
+  for (const [index, platform] of platforms.entries()) {
     const connection = platformMap.get(platform);
 
     if (!connection || !connection.isConnected) {
-      results.push({
-        platform,
+      results[index] = {
+        ...results[index],
         status: "failed",
-        postId: null,
-        postUrl: null,
         errorMessage: `${platform} is not connected. Please connect it in Settings first.`,
-      });
+      };
+      await saveProgress();
       continue;
     }
 
@@ -247,13 +266,14 @@ router.post("/posts/:id/publish", requireAuth, async (req, res): Promise<void> =
             .where(eq(platformsTable.id, connection.id));
         }
 
-        results.push({
-          platform,
+        results[index] = {
+          ...results[index],
           status: "success",
           postId: uploaded.videoId,
           postUrl: uploaded.url,
           errorMessage: null,
-        });
+        };
+        await saveProgress();
       } else if (platform === "instagram") {
         if (!connection.accessToken || !connection.accountId) {
           throw new Error("A conexão do Instagram não possui token ou ID de conta.");
@@ -274,13 +294,14 @@ router.post("/posts/:id/publish", requireAuth, async (req, res): Promise<void> =
           videoUrl,
           caption: post.caption,
         });
-        results.push({
-          platform,
+        results[index] = {
+          ...results[index],
           status: "success",
           postId: uploaded.mediaId,
           postUrl: uploaded.url,
           errorMessage: null,
-        });
+        };
+        await saveProgress();
       } else if (platform === "tiktok") {
         const { buffer, contentType } = await downloadObject(post.videoObjectPath);
         logger.info(
@@ -313,24 +334,24 @@ router.post("/posts/:id/publish", requireAuth, async (req, res): Promise<void> =
             .where(eq(platformsTable.id, connection.id));
         }
 
-        results.push({
-          platform,
+        results[index] = {
+          ...results[index],
           status: "success",
           postId: uploaded.publishId,
           postUrl: null,
           errorMessage: null,
-        });
+        };
+        await saveProgress();
       } else {
         throw new Error(`Publicação em ${platform} ainda não está configurada.`);
       }
     } catch (err: unknown) {
-      results.push({
-        platform,
+      results[index] = {
+        ...results[index],
         status: "failed",
-        postId: null,
-        postUrl: null,
         errorMessage: err instanceof Error ? err.message : "Unknown error",
-      });
+      };
+      await saveProgress();
     }
   }
 
