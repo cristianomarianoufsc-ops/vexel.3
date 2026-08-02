@@ -28,19 +28,16 @@ export default function Posts() {
   const deletePost = useDeletePost();
   const publishPost = usePublishPost();
   const { toast } = useToast();
-  const hasPendingPublication = posts.some((post) =>
-    post.platformResults.some((result) => result.status === "pending")
-  );
 
   useEffect(() => {
-    if (publishingIds.size === 0 && !hasPendingPublication) return;
+    if (publishingIds.size === 0) return;
 
     const interval = window.setInterval(() => {
       refetch();
     }, 2000);
 
     return () => window.clearInterval(interval);
-  }, [publishingIds.size, hasPendingPublication, refetch]);
+  }, [publishingIds.size, refetch]);
 
   const handleDelete = async (id: number) => {
     if (!confirm("Tem certeza que deseja excluir este post?")) return;
@@ -55,7 +52,6 @@ export default function Posts() {
 
   const handlePublish = async (id: number) => {
     setPublishingIds((current) => new Set(current).add(id));
-    await refetch();
     try {
       await publishPost.mutateAsync({ id });
       toast({ title: "Publicação iniciada", description: "Seu post está sendo enviado às plataformas." });
@@ -141,7 +137,9 @@ export default function Posts() {
               const progressPercent = post.platforms.length > 0
                 ? Math.round((completedPlatforms / post.platforms.length) * 100)
                 : 0;
-              const isPublishing = publishingIds.has(post.id) || resultsByPlatform.some((result) => result.status === "pending");
+              // A persisted pending result is historical data until the user
+              // explicitly starts a new publication in this session.
+              const isPublishing = publishingIds.has(post.id);
 
               return (
             <Card key={post.id} className="bg-card border-border/50 overflow-hidden hover:border-border transition-colors group">
