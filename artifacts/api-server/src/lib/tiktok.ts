@@ -1,3 +1,5 @@
+import { logger } from "./logger";
+
 const TIKTOK_API_BASE_URL = "https://open.tiktokapis.com";
 const TIKTOK_OAUTH_TOKEN_URL = "https://open.tiktokapis.com/v2/oauth/token/";
 const TIKTOK_CHUNK_SIZE = 10_000_000;
@@ -66,6 +68,11 @@ function formatTikTokError(
   return details.length > 0 ? `TikTok: ${details.join(" — ")}` : fallback;
 }
 
+function safeLogError(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.replace(/https?:\/\/\S+/gi, "[redacted-url]");
+}
+
 async function parseResponse<T>(response: Response): Promise<TikTokEnvelope<T>> {
   const text = await response.text();
   if (!text) return {};
@@ -76,6 +83,7 @@ async function parseResponse<T>(response: Response): Promise<TikTokEnvelope<T>> 
     throw new Error(`TikTok retornou uma resposta inválida (HTTP ${response.status}).`);
   }
 }
+
 
 async function tiktokApiRequest<T>(
   path: string,
@@ -270,11 +278,20 @@ function choosePrivacyLevel(options: string[]): string {
 }
 
 async function queryCreatorInfo(accessToken: string): Promise<TikTokCreatorInfo> {
-  return tiktokApiRequest<TikTokCreatorInfo>(
+  const creatorInfo = await tiktokApiRequest<TikTokCreatorInfo>(
     "/v2/post/publish/creator_info/query/",
     accessToken,
     { method: "POST" },
   );
+  logger.info(
+    {
+      event: "tiktok.creator_info.completed",
+      privacyOptionsCount: creatorInfo.privacy_level_options?.length ?? 0,
+      maxVideoDurationSec: creatorInfo.max_video_post_duration_sec ?? null,
+    },
+    "TikTok creator info completed",
+  );
+  return creatorInfo;
 }
 
 async function initializeVideoPublish(options: {
@@ -282,7 +299,7 @@ async function initializeVideoPublish(options: {
   videoSize: number;
   title: string;
   privacyLevel: string;
-}): Promise<TikTokVideoInit & { chunkSize: number }> {
+}): Promise<TikTokVideoInit & { chunkSize: number; totalChunkCount: number }> {
   // TikTok requires the whole file size as chunk_size when the video is
   // smaller than the normal 10 MB chunk. Otherwise video/init returns
   // invalid_params ("The chunk size is invalid").
@@ -290,7 +307,7 @@ async function initializeVideoPublish(options: {
   const totalChunkCount =
     options.videoSize <= TIKTOK_CHUNK_SIZE
       ? 1
-      : Math.floor(options.videoSize / TIKTOK_CHUNK_SIZE);
+      : Math.ceil(options.videoSize / TIKTOK_CHUNK_SIZE);
 
   return tiktokApiRequest<TikTokVideoInit>(
     "/v2/post/publish/video/init/",
@@ -314,7 +331,7 @@ async function initializeVideoPublish(options: {
         },
       }),
     },
-  ).then((data) => ({ ...data, chunkSize }));
+  ).then((data) => ({ ...data, chunkSize, totalChunkCount }));
 }
 
 async function uploadVideoFile(options: {
@@ -326,7 +343,17 @@ async function uploadVideoFile(options: {
   const totalChunkCount =
     options.video.length <= options.chunkSize
       ? 1
-      : Math.floor(options.video.length / options.chunkSize);
+      : Math.ceil(options.video.length / options.chunkSize);
+
+  logger.info(
+    {
+      event: "tiktok.video_upload.started",
+      videoSize: options.video.length,
+      chunkSize: options.chunkSize,
+      totalChunkCount,
+    },
+    "TikTok video upload started",
+  );
 
   for (let chunkIndex = 0; chunkIndex < totalChunkCount; chunkIndex += 1) {
     const start =
@@ -359,6 +386,16 @@ async function uploadVideoFile(options: {
       );
     }
   }
+
+  logger.info(
+    {
+      event: "tiktok.video_upload.completed",
+      videoSize: options.video.length,
+      chunkSize: options.chunkSize,
+      totalChunkCount,
+    },
+    "TikTok video upload completed",
+  );
 }
 
 async function waitForPublish(options: {
@@ -412,38 +449,80 @@ export async function publishVideoToTikTok(options: {
     throw new Error("O vídeo enviado está vazio.");
   }
 
-  const creatorInfo = await queryCreatorInfo(options.accessToken);
-  const privacyLevel = choosePrivacyLevel(
-    creatorInfo.privacy_level_options || [],
+  logger.info(
+    {
+      event: "tiktok.publish.started",
+      videoSize: options.video.length,
+      contentType: options.contentType || "video/mp4",
+    },
+    "TikTok publish started",
   );
-  const title = [options.title.trim(), options.caption.trim()]
-    .filter(Boolean)
-    .join("\n");
-  const initialized = await initializeVideoPublish({
-    accessToken: options.accessToken,
-    videoSize: options.video.length,
-    title: title || "VexelHub",
-    privacyLevel,
-  });
 
-  if (!initialized.publish_id || !initialized.upload_url) {
-    throw new Error("O TikTok não retornou os dados para iniciar o upload.");
+  try {
+    const creatorInfo = await queryCreatorInfo(options.accessToken);
+    const privacyLevel = choosePrivacyLevel(
+      creatorInfo.privacy_level_options || [],
+    );
+    const title = [options.title.trim(), options.caption.trim()]
+      .filter(Boolean)
+      .join("\n");
+    const initialized = await initializeVideoPublish({
+      accessToken: options.accessToken,
+      videoSize: options.video.length,
+      title: title || "VexelHub",
+      privacyLevel,
+    });
+
+    logger.info(
+      {
+        event: "tiktok.video_init.completed",
+        hasPublishId: Boolean(initialized.publish_id),
+        hasUploadUrl: Boolean(initialized.upload_url),
+        chunkSize: initialized.chunkSize,
+        totalChunkCount: initialized.totalChunkCount,
+        privacyLevel,
+      },
+      "TikTok video init completed",
+    );
+
+    if (!initialized.publish_id || !initialized.upload_url) {
+      throw new Error("O TikTok não retornou os dados para iniciar o upload.");
+    }
+
+    await uploadVideoFile({
+      uploadUrl: initialized.upload_url,
+      video: options.video,
+      contentType: options.contentType || "video/mp4",
+      chunkSize: initialized.chunkSize,
+    });
+
+    const status = await waitForPublish({
+      accessToken: options.accessToken,
+      publishId: initialized.publish_id,
+    });
+
+    logger.info(
+      {
+        event: "tiktok.publish.completed",
+        status: status.status,
+        hasPublishId: Boolean(status.publish_id || initialized.publish_id),
+      },
+      "TikTok publish completed",
+    );
+
+    return {
+      publishId: status.publish_id || initialized.publish_id,
+      status: "PUBLISH_COMPLETE",
+    };
+  } catch (error) {
+    logger.error(
+      {
+        event: "tiktok.publish.failed",
+        error: safeLogError(error),
+        videoSize: options.video.length,
+      },
+      "TikTok publish failed",
+    );
+    throw error;
   }
-
-  await uploadVideoFile({
-    uploadUrl: initialized.upload_url,
-    video: options.video,
-    contentType: options.contentType || "video/mp4",
-    chunkSize: initialized.chunkSize,
-  });
-
-  const status = await waitForPublish({
-    accessToken: options.accessToken,
-    publishId: initialized.publish_id,
-  });
-
-  return {
-    publishId: status.publish_id || initialized.publish_id,
-    status: "PUBLISH_COMPLETE",
-  };
 }

@@ -8,6 +8,7 @@ import {
   ListPostsQueryParams,
 } from "@workspace/api-zod";
 import { downloadObject, getPublicUrl } from "../lib/storageProvider";
+import { logger } from "../lib/logger";
 import { getUsableYouTubeAccessToken, uploadVideoToYouTube } from "../lib/youtube";
 import { uploadInstagramReel } from "../lib/instagram";
 import {
@@ -282,6 +283,15 @@ router.post("/posts/:id/publish", requireAuth, async (req, res): Promise<void> =
         });
       } else if (platform === "tiktok") {
         const { buffer, contentType } = await downloadObject(post.videoObjectPath);
+        logger.info(
+          {
+            event: "tiktok.video_download.completed",
+            postId: id,
+            videoSize: buffer.length,
+            contentType: contentType || "video/mp4",
+          },
+          "TikTok video download completed",
+        );
         const token = await getUsableTikTokAccessToken(connection);
         const uploaded = await publishVideoToTikTok({
           accessToken: token.accessToken,
