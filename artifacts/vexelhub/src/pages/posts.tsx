@@ -162,17 +162,23 @@ export default function Posts() {
                     <div className="flex gap-2">
                       {post.platformResults && post.platformResults.length > 0 ? (
                         post.platformResults.map(pr => (
-                          <div 
-                            key={pr.platform} 
-                            className={`flex flex-col items-center justify-center w-10 h-10 rounded-md border ${
-                              pr.status === "success" ? "border-green-500/30 bg-green-500/10 text-green-400" :
-                              pr.status === "failed" ? "border-destructive/30 bg-destructive/10 text-destructive" :
-                              "border-border bg-muted text-muted-foreground"
-                            }`}
-                            title={`${pr.platform}: ${pr.status} ${pr.errorMessage ? `- ${pr.errorMessage}` : ''}`}
-                          >
-                            <span className="text-[10px] font-bold uppercase">{pr.platform.substring(0, 2)}</span>
-                            {pr.status === "failed" && <AlertCircle size={10} className="mt-0.5" />}
+                          <div key={pr.platform} className="flex flex-col items-center gap-1">
+                            <div
+                              className={`flex flex-col items-center justify-center w-10 h-10 rounded-md border ${
+                                pr.status === "success" ? "border-green-500/30 bg-green-500/10 text-green-400" :
+                                pr.status === "failed" ? "border-destructive/30 bg-destructive/10 text-destructive" :
+                                "border-border bg-muted text-muted-foreground"
+                              }`}
+                              title={`${pr.platform}: ${pr.status} ${pr.errorMessage ? `- ${pr.errorMessage}` : ''}`}
+                            >
+                              <span className="text-[10px] font-bold uppercase">{pr.platform.substring(0, 2)}</span>
+                              {pr.status === "failed" && <AlertCircle size={10} className="mt-0.5" />}
+                            </div>
+                            {pr.status === "failed" && pr.errorMessage && (
+                              <span className="max-w-[220px] text-[10px] leading-tight text-destructive text-right">
+                                {pr.errorMessage}
+                              </span>
+                            )}
                           </div>
                         ))
                       ) : (

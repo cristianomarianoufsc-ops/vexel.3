@@ -10,6 +10,10 @@ import {
 import { downloadObject, getPublicUrl } from "../lib/storageProvider";
 import { getUsableYouTubeAccessToken, uploadVideoToYouTube } from "../lib/youtube";
 import { uploadInstagramReel } from "../lib/instagram";
+import {
+  getUsableTikTokAccessToken,
+  publishVideoToTikTok,
+} from "../lib/tiktok";
 
 const router: IRouter = Router();
 
@@ -27,6 +31,7 @@ function formatPost(p: typeof postsTable.$inferSelect) {
     platformResults: (p.platformResults as Array<{
       platform: string;
       status: string;
+      postId: string | null;
       postUrl: string | null;
       errorMessage: string | null;
     }>) || [],
@@ -194,6 +199,7 @@ router.post("/posts/:id/publish", requireAuth, async (req, res): Promise<void> =
   const results: Array<{
     platform: string;
     status: string;
+    postId: string | null;
     postUrl: string | null;
     errorMessage: string | null;
   }> = [];
@@ -205,6 +211,7 @@ router.post("/posts/:id/publish", requireAuth, async (req, res): Promise<void> =
       results.push({
         platform,
         status: "failed",
+        postId: null,
         postUrl: null,
         errorMessage: `${platform} is not connected. Please connect it in Settings first.`,
       });
@@ -242,6 +249,7 @@ router.post("/posts/:id/publish", requireAuth, async (req, res): Promise<void> =
         results.push({
           platform,
           status: "success",
+          postId: uploaded.videoId,
           postUrl: uploaded.url,
           errorMessage: null,
         });
@@ -268,7 +276,38 @@ router.post("/posts/:id/publish", requireAuth, async (req, res): Promise<void> =
         results.push({
           platform,
           status: "success",
+          postId: uploaded.mediaId,
           postUrl: uploaded.url,
+          errorMessage: null,
+        });
+      } else if (platform === "tiktok") {
+        const { buffer, contentType } = await downloadObject(post.videoObjectPath);
+        const token = await getUsableTikTokAccessToken(connection);
+        const uploaded = await publishVideoToTikTok({
+          accessToken: token.accessToken,
+          video: buffer,
+          contentType: contentType || "video/mp4",
+          title: post.title,
+          caption: post.caption,
+        });
+
+        if (token.refreshed) {
+          await db
+            .update(platformsTable)
+            .set({
+              accessToken: token.accessToken,
+              refreshToken: token.refreshToken,
+              tokenExpiresAt: token.expiresAt,
+              updatedAt: new Date(),
+            })
+            .where(eq(platformsTable.id, connection.id));
+        }
+
+        results.push({
+          platform,
+          status: "success",
+          postId: uploaded.publishId,
+          postUrl: null,
           errorMessage: null,
         });
       } else {
@@ -278,6 +317,7 @@ router.post("/posts/:id/publish", requireAuth, async (req, res): Promise<void> =
       results.push({
         platform,
         status: "failed",
+        postId: null,
         postUrl: null,
         errorMessage: err instanceof Error ? err.message : "Unknown error",
       });
