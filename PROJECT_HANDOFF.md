@@ -177,22 +177,35 @@ O endpoint:
 
 O status e a mensagem de erro de cada plataforma devem continuar sendo preservados mesmo quando apenas uma plataforma falhar.
 
-## 9. O que falta para o TikTok
+## 9. TikTok — estado atual
 
-O próximo objetivo é implementar publicação real no TikTok, por usuário.
+A integração TikTok está implementada e validada em publicação real por usuário.
 
 O OAuth e a publicação real foram implementados em `artifacts/api-server/src/routes/platforms.ts`, `artifacts/api-server/src/lib/tiktok.ts` e `artifacts/api-server/src/routes/posts.ts`. O fluxo usa:
 
 - `TIKTOK_CLIENT_KEY`
 - callback em `/api/platforms/tiktok/callback`;
-- scopes `user.info.basic`, `video.publish` e `video.upload`;
+- scopes `video.publish` e `video.upload`; o `open_id` retornado pelo OAuth identifica a conta sem depender do scope opcional `user.info.basic`;
 - renovação de access token via refresh token;
 - consulta de `creator_info/query` para respeitar as opções de privacidade da conta;
 - Content Posting API Direct Post com `FILE_UPLOAD`, upload binário em partes e consulta assíncrona de status;
 - seleção padrão de privacidade `SELF_ONLY`, necessária para clientes Sandbox/não auditados; `TIKTOK_DEFAULT_PRIVACY` pode sobrescrever isso para uma conta auditada;
 - gravação do `publish_id`, status e mensagem de erro em `platformResults`.
 
-O app TikTok Sandbox usado no teste precisa continuar configurado com Login Kit Web, a conta de teste autorizada, a redirect URI pública `https://vexelhub-api.fly.dev/api/platforms/tiktok/callback`, os três scopes acima e Direct Post habilitado. A publicação deve ser validada com um vídeo pequeno no Sandbox antes de trocar para Produção.
+O app TikTok Sandbox usado no teste precisa continuar configurado com Login Kit Web, a conta de teste autorizada, a redirect URI pública `https://vexelhub-api.fly.dev/api/platforms/tiktok/callback`, os scopes de publicação acima e Direct Post habilitado.
+
+Validação concluída:
+
+- a conexão OAuth foi concluída com sucesso;
+- um vídeo chegou à conta TikTok de teste;
+- o backend registrou `privacyLevel: "SELF_ONLY"`, upload concluído e status final `PUBLISH_COMPLETE`;
+- uma publicação selecionando YouTube, Instagram e TikTok ao mesmo tempo foi concluída com sucesso nas três plataformas.
+
+Limitação atual do TikTok:
+
+- como o app ainda não foi auditado, a conta usada no Sandbox precisa ser privada;
+- posts do cliente não auditado devem usar `SELF_ONLY`;
+- contas públicas e posts públicos dependem da auditoria/aprovação do app pelo TikTok.
 
 Não assumir que o fluxo do Instagram pode ser copiado literalmente. A API do TikTok tem requisitos próprios de aprovação, scopes, publicação e formato de upload; o helper dedicado segue a documentação oficial atual.
 
@@ -257,6 +270,7 @@ Considerar o trabalho concluído somente quando:
 - outro usuário não herda essa conexão;
 - logout/login da mesma conta preserva a conexão;
 - um vídeo de teste é realmente publicado ou o fluxo retorna um erro oficial e compreensível;
+- uma publicação simultânea em YouTube, Instagram e TikTok é concluída com sucesso;
 - o resultado aparece em `platformResults`;
 - o build do backend passa;
 - o backend publicado responde `HTTP 200` no health check;
