@@ -3,11 +3,10 @@ import { useListPosts, useDeletePost, usePublishPost } from "@workspace/api-clie
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ListVideo, Trash2, CalendarIcon, Play, AlertCircle, FileVideo, MoreVertical, Send } from "lucide-react";
+import { ListVideo, Trash2, CalendarIcon, Play, AlertCircle, FileVideo, Send } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ListPostsStatus } from "@workspace/api-client-react";
@@ -127,23 +126,28 @@ export default function Posts() {
                       </p>
                     </div>
                     
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-white shrink-0">
-                          <MoreVertical size={18} />
+                    <div className="flex shrink-0 items-center gap-2">
+                      {(post.status === "draft" || post.status === "scheduled" || post.status === "failed") && (
+                        <Button
+                          size="sm"
+                          className="bg-primary px-3 font-bold text-primary-foreground shadow-[0_0_18px_hsl(var(--primary)/0.2)] hover:shadow-[0_0_22px_hsl(var(--primary)/0.35)]"
+                          onClick={() => handlePublish(post.id)}
+                        >
+                          <Send />
+                          Publicar agora
                         </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-popover border-border/50">
-                        {(post.status === "draft" || post.status === "scheduled" || post.status === "failed") && (
-                          <DropdownMenuItem className="cursor-pointer text-white focus:bg-primary/20" onClick={() => handlePublish(post.id)}>
-                            <Send className="mr-2 h-4 w-4 text-primary" /> Publicar Agora
-                          </DropdownMenuItem>
-                        )}
-                        <DropdownMenuItem className="cursor-pointer text-destructive focus:bg-destructive/20 focus:text-destructive" onClick={() => handleDelete(post.id)}>
-                          <Trash2 className="mr-2 h-4 w-4" /> Excluir Post
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="border-destructive/30 bg-destructive/5 px-3 text-destructive hover:border-destructive/50 hover:bg-destructive/10 hover:text-destructive"
+                        onClick={() => handleDelete(post.id)}
+                        title="Excluir post"
+                      >
+                        <Trash2 />
+                        <span className="hidden sm:inline">Excluir</span>
+                      </Button>
+                    </div>
                   </div>
                   
                   <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-border/30">
