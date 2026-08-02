@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useListPosts, useDeletePost, usePublishPost } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ListVideo, Trash2, CalendarIcon, Play, AlertCircle, FileVideo, Send } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { ListVideo, Trash2, CalendarIcon, Play, AlertCircle, FileVideo, Send, Loader2, CheckCircle2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
@@ -20,12 +21,26 @@ const STATUS_LABELS: Record<string, string> = {
 
 export default function Posts() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [publishingIds, setPublishingIds] = useState<Set<number>>(new Set());
   const { data: posts = [], isLoading, refetch } = useListPosts(
     statusFilter !== "all" ? { status: statusFilter as ListPostsStatus } : undefined
   );
   const deletePost = useDeletePost();
   const publishPost = usePublishPost();
   const { toast } = useToast();
+  const hasPendingPublication = posts.some((post) =>
+    post.platformResults.some((result) => result.status === "pending")
+  );
+
+  useEffect(() => {
+    if (publishingIds.size === 0 && !hasPendingPublication) return;
+
+    const interval = window.setInterval(() => {
+      refetch();
+    }, 2000);
+
+    return () => window.clearInterval(interval);
+  }, [publishingIds.size, hasPendingPublication, refetch]);
 
   const handleDelete = async (id: number) => {
     if (!confirm("Tem certeza que deseja excluir este post?")) return;
@@ -39,12 +54,20 @@ export default function Posts() {
   };
 
   const handlePublish = async (id: number) => {
+    setPublishingIds((current) => new Set(current).add(id));
+    await refetch();
     try {
       await publishPost.mutateAsync({ id });
       toast({ title: "Publicação iniciada", description: "Seu post está sendo enviado às plataformas." });
       refetch();
     } catch (e) {
       toast({ title: "Falha ao publicar", variant: "destructive" });
+    } finally {
+      setPublishingIds((current) => {
+        const next = new Set(current);
+        next.delete(id);
+        return next;
+      });
     }
   };
 
@@ -102,6 +125,25 @@ export default function Posts() {
           </div>
         ) : (
           posts.map(post => (
+            (() => {
+              const resultsByPlatform = post.platforms.map((platform) =>
+                post.platformResults.find((result) => result.platform === platform) ?? {
+                  platform,
+                  status: "pending" as const,
+                  postId: null,
+                  postUrl: null,
+                  errorMessage: null,
+                }
+              );
+              const completedPlatforms = resultsByPlatform.filter(
+                (result) => result.status === "success" || result.status === "failed"
+              ).length;
+              const progressPercent = post.platforms.length > 0
+                ? Math.round((completedPlatforms / post.platforms.length) * 100)
+                : 0;
+              const isPublishing = publishingIds.has(post.id) || resultsByPlatform.some((result) => result.status === "pending");
+
+              return (
             <Card key={post.id} className="bg-card border-border/50 overflow-hidden hover:border-border transition-colors group">
               <CardContent className="p-0 sm:flex items-stretch">
                 <div className="w-full sm:w-48 h-48 sm:h-auto bg-muted shrink-0 relative flex items-center justify-center border-r border-border/50">
@@ -130,11 +172,12 @@ export default function Posts() {
                       {(post.status === "draft" || post.status === "scheduled" || post.status === "failed") && (
                         <Button
                           size="sm"
+                          disabled={isPublishing}
                           className="bg-primary px-3 font-bold text-primary-foreground shadow-[0_0_18px_hsl(var(--primary)/0.2)] hover:shadow-[0_0_22px_hsl(var(--primary)/0.35)]"
                           onClick={() => handlePublish(post.id)}
                         >
-                          <Send />
-                          Publicar agora
+                          {isPublishing ? <Loader2 className="animate-spin" /> : <Send />}
+                          {isPublishing ? "Publicando..." : "Publicar agora"}
                         </Button>
                       )}
                       <Button
@@ -149,6 +192,33 @@ export default function Posts() {
                       </Button>
                     </div>
                   </div>
+
+                  {isPublishing && (
+                    <div className="mt-4 space-y-2 rounded-lg border border-primary/20 bg-primary/5 p-3">
+                      <div className="flex items-center justify-between gap-3 text-xs">
+                        <span className="font-semibold text-white">Publicando nas plataformas...</span>
+                        <span className="font-bold text-primary">{progressPercent}%</span>
+                      </div>
+                      <Progress value={progressPercent} className="h-2 bg-primary/10" />
+                      <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px]">
+                        {resultsByPlatform.map((result) => (
+                          <span
+                            key={result.platform}
+                            className={`flex items-center gap-1 ${
+                              result.status === "success" ? "text-green-400" :
+                              result.status === "failed" ? "text-destructive" :
+                              "text-muted-foreground"
+                            }`}
+                          >
+                            {result.status === "success" ? <CheckCircle2 size={12} /> :
+                              result.status === "failed" ? <AlertCircle size={12} /> :
+                              <Loader2 size={12} className="animate-spin" />}
+                            {result.platform}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   
                   <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-border/30">
                     <div className="flex items-center gap-4 text-xs font-medium">
@@ -163,9 +233,9 @@ export default function Posts() {
                       </div>
                     </div>
                     
-                    <div className="flex gap-2">
-                      {post.platformResults && post.platformResults.length > 0 ? (
-                        post.platformResults.map(pr => (
+                     <div className="flex gap-2">
+                       {resultsByPlatform.length > 0 ? (
+                         resultsByPlatform.map(pr => (
                           <div key={pr.platform} className="flex flex-col items-center gap-1">
                             <div
                               className={`flex flex-col items-center justify-center w-10 h-10 rounded-md border ${
@@ -197,6 +267,8 @@ export default function Posts() {
                 </div>
               </CardContent>
             </Card>
+              );
+            })()
           ))
         )}
       </div>
