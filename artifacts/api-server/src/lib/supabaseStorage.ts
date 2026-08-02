@@ -83,10 +83,15 @@ export function parseSupabaseObjectPath(objectPath: string): {
 export async function getSupabasePublicUrl(objectPath: string): Promise<string> {
   const { bucket, path } = parseSupabaseObjectPath(objectPath);
   const supabase = getSupabaseClient();
-  const {
-    data: { publicUrl },
-  } = supabase.storage.from(bucket).getPublicUrl(path);
-  return publicUrl;
+  const { data, error } = await supabase.storage
+    .from(bucket)
+    .createSignedUrl(path, 15 * 60);
+  if (error || !data?.signedUrl) {
+    throw new Error(
+      `Failed to create Supabase signed video URL: ${error?.message ?? "unknown error"}`,
+    );
+  }
+  return data.signedUrl;
 }
 
 export async function downloadSupabaseObject(

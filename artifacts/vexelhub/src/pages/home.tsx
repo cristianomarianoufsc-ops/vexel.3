@@ -91,6 +91,15 @@ export default function Home() {
           </div>
         </div>
       </main>
+      <footer className="relative z-10 flex flex-col items-center justify-center gap-3 border-t border-border/50 px-6 py-6 text-sm text-muted-foreground sm:flex-row sm:gap-6">
+        <span>© 2026 VexelHub</span>
+        <Link href="/terms" className="transition-colors hover:text-white">
+          Termos de Serviço
+        </Link>
+        <Link href="/privacy" className="transition-colors hover:text-white">
+          Política de Privacidade
+        </Link>
+      </footer>
     </div>
   );
 }
