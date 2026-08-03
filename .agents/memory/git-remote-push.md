@@ -9,7 +9,7 @@ O método confirmado é usar a API REST do GitHub via `curl` com o `GITHUB_TOKEN
 
 **Why:** `GITHUB_TOKEN` funciona no shell como `$GITHUB_TOKEN`, mas o Git CLI não o usa automaticamente como credencial HTTPS. A API REST contorna isso completamente e permite atualizar arquivos individualmente sem precisar de histórico compatível.
 
-**How to apply:** Para cada arquivo que precisa ir ao GitHub, execute a sequência abaixo no shell:
+**How to apply:** Push para o GitHub é obrigatório ao concluir qualquer alteração solicitada, porque o Vercel usa o `main` remoto. Primeiro valide o código; depois envie os arquivos alterados para o `main` remoto, confirme o SHA retornado pelo GitHub e só então informe a conclusão. Para cada arquivo que precisa ir ao GitHub, execute a sequência abaixo no shell:
 
 ```bash
 # 1. Busca o SHA atual do arquivo no GitHub (necessário para update; omitir se o arquivo é novo)
@@ -48,3 +48,4 @@ Pontos importantes:
 - Se o arquivo ainda não existe no GitHub, omitir o campo `sha` do body.
 - Cada arquivo gera um commit separado no GitHub.
 - O remote `gitsafe-backup` é o backup interno do Replit; confirmações de push nele não significam que o GitHub foi atualizado.
+- Nunca considerar uma alteração concluída apenas porque existe no workspace local ou no `gitsafe-backup`; confirme `refs/heads/main` no GitHub após o envio.
