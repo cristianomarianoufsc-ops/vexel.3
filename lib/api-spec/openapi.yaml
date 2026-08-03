@@ -456,6 +456,8 @@ components:
           type: string
         videoObjectPath:
           type: ["string", "null"]
+        thumbnailUrl:
+          type: ["string", "null"]
         platforms:
           type: array
           items:
@@ -600,4 +602,6 @@ components:
           type: string
         objectPath:
           type: string
-      required: [uploadURL, objectPath]
+        publicURL:
+          type: string
+      required: [uploadURL, objectPath, publicURL]
