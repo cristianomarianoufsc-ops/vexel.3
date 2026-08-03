@@ -2,3 +2,4 @@
 - [TikTok Content Posting](tiktok-content-posting.md) — OAuth usa resposta direta e o Direct Post exige creator info, upload binário em partes e status assíncrono.
 - [OpenAPI codegen e Zod](openapi-codegen-zod.md) — o Orval instalado pode gerar zod.int(), incompatível com o Zod usado; validar e não commitar essa saída.
 - [Async publishing UI state](async-publishing-ui-state.md) — estados pending persistidos não significam operação ativa; a barra só deve abrir após ação explícita nesta sessão.
+- [Persisted publishing jobs](persisted-publishing-jobs.md) — publicação usa status publishing e progresso por plataforma persistidos no post para sobreviver a reloads.
