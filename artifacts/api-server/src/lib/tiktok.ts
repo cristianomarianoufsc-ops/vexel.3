@@ -48,12 +48,6 @@ type TikTokPublishStatus = {
   fail_reason?: string;
 };
 
-type TikTokUserInfo = {
-  open_id?: string;
-  display_name?: string;
-  username?: string;
-};
-
 type TikTokPlatformConnection = {
   accessToken: string | null;
   refreshToken: string | null;
@@ -247,26 +241,6 @@ export async function getUsableTikTokAccessToken(
   return { ...refreshed, refreshed: true };
 }
 
-export async function getTikTokProfile(accessToken: string): Promise<{
-  accountId: string;
-  accountName: string;
-}> {
-  const profile = await tiktokApiRequest<TikTokUserInfo>(
-    "/v2/user/info/?fields=open_id,display_name,username",
-    accessToken,
-  );
-
-  const accountId = profile.open_id;
-  if (!accountId) {
-    throw new Error("O TikTok não retornou o ID da conta autorizada.");
-  }
-
-  return {
-    accountId,
-    accountName: profile.username || profile.display_name || "TikTok",
-  };
-}
-
 function choosePrivacyLevel(options: string[]): string {
   const configured = process.env.TIKTOK_DEFAULT_PRIVACY?.trim();
   if (configured && options.includes(configured)) return configured;
@@ -343,6 +317,7 @@ async function uploadVideoFile(options: {
   video: Buffer;
   contentType: string;
   chunkSize: number;
+  onProgress?: (progress: number, stage: string) => void | Promise<void>;
 }): Promise<void> {
   const totalChunkCount =
     options.video.length <= options.chunkSize
@@ -389,6 +364,11 @@ async function uploadVideoFile(options: {
         }`,
       );
     }
+
+    await options.onProgress?.(
+      15 + Math.round(((end + 1) / options.video.length) * 60),
+      "Enviando vídeo",
+    );
   }
 
   logger.info(
@@ -405,6 +385,7 @@ async function uploadVideoFile(options: {
 async function waitForPublish(options: {
   accessToken: string;
   publishId: string;
+  onProgress?: (progress: number, stage: string) => void | Promise<void>;
 }): Promise<TikTokPublishStatus> {
   const deadline = Date.now() + TIKTOK_PUBLISH_TIMEOUT_MS;
   let lastStatus = "PROCESSING_UPLOAD";
@@ -420,6 +401,13 @@ async function waitForPublish(options: {
       },
     );
     lastStatus = status.status || lastStatus;
+    const processingProgress =
+      lastStatus === "PUBLISH_COMPLETE"
+        ? 100
+        : lastStatus === "PROCESSING_DOWNLOAD"
+          ? 90
+          : 82;
+    await options.onProgress?.(processingProgress, "Processando no TikTok");
 
     if (lastStatus === "PUBLISH_COMPLETE") return status;
     if (lastStatus === "FAILED") {
@@ -445,6 +433,7 @@ export async function publishVideoToTikTok(options: {
   contentType: string;
   title: string;
   caption: string;
+  onProgress?: (progress: number, stage: string) => void | Promise<void>;
 }): Promise<{
   publishId: string;
   status: "PUBLISH_COMPLETE";
@@ -463,6 +452,7 @@ export async function publishVideoToTikTok(options: {
   );
 
   try {
+    await options.onProgress?.(5, "Preparando vídeo");
     const creatorInfo = await queryCreatorInfo(options.accessToken);
     const privacyLevel = choosePrivacyLevel(
       creatorInfo.privacy_level_options || [],
@@ -476,6 +466,7 @@ export async function publishVideoToTikTok(options: {
       title: title || "VexelHub",
       privacyLevel,
     });
+    await options.onProgress?.(15, "Upload iniciado");
 
     logger.info(
       {
@@ -498,11 +489,13 @@ export async function publishVideoToTikTok(options: {
       video: options.video,
       contentType: options.contentType || "video/mp4",
       chunkSize: initialized.chunkSize,
+      onProgress: options.onProgress,
     });
 
     const status = await waitForPublish({
       accessToken: options.accessToken,
       publishId: initialized.publish_id,
+      onProgress: options.onProgress,
     });
 
     logger.info(
