@@ -73,14 +73,16 @@ export default function Publish() {
     const objectUrl = URL.createObjectURL(videoFile);
     try {
       const video = document.createElement("video");
-      video.preload = "metadata";
+      video.preload = "auto";
       video.muted = true;
       video.playsInline = true;
+      video.crossOrigin = "anonymous";
       video.src = objectUrl;
 
+      // Wait until the browser has loaded enough metadata to know dimensions
       await new Promise<void>((resolve, reject) => {
         const timeout = window.setTimeout(() => reject(new Error("Tempo excedido ao gerar miniatura")), 15000);
-        video.onloadeddata = () => {
+        video.onloadedmetadata = () => {
           window.clearTimeout(timeout);
           resolve();
         };
@@ -88,6 +90,20 @@ export default function Publish() {
           window.clearTimeout(timeout);
           reject(new Error("Não foi possível ler o vídeo para gerar miniatura"));
         };
+      });
+
+      // Seek to 0 so the browser renders the first frame into the element
+      await new Promise<void>((resolve, reject) => {
+        const timeout = window.setTimeout(resolve, 5000); // fallback: proceed anyway
+        video.onseeked = () => {
+          window.clearTimeout(timeout);
+          resolve();
+        };
+        video.onerror = () => {
+          window.clearTimeout(timeout);
+          reject(new Error("Erro ao buscar frame do vídeo"));
+        };
+        video.currentTime = 0.001; // nudge past 0 to force a frame paint
       });
 
       const canvas = document.createElement("canvas");
