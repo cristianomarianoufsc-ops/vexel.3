@@ -15,6 +15,7 @@ import { ListPostsStatus } from "@workspace/api-client-react";
 const STATUS_LABELS: Record<string, string> = {
   draft: "RASCUNHO",
   scheduled: "AGENDADO",
+  publishing: "PUBLICANDO",
   published: "PUBLICADO",
   failed: "FALHOU",
 };
@@ -29,8 +30,28 @@ export default function Posts() {
   const publishPost = usePublishPost();
   const { toast } = useToast();
 
+  // `publishing` is an explicit persisted job state. Historical platform
+  // results with `pending` alone must not reopen a progress bar.
   useEffect(() => {
-    if (publishingIds.size === 0) return;
+    const activeIds = posts
+      .filter((post) => post.status === "publishing")
+      .map((post) => post.id);
+
+    setPublishingIds((current) => {
+      const next = new Set(activeIds);
+      current.forEach((id) => {
+        if (posts.some((post) => post.id === id && post.status === "publishing")) {
+          next.add(id);
+        }
+      });
+      return next;
+    });
+  }, [posts]);
+
+  useEffect(() => {
+    const hasActivePublishing =
+      publishingIds.size > 0 || posts.some((post) => post.status === "publishing");
+    if (!hasActivePublishing) return;
 
     const interval = window.setInterval(() => {
       refetch();
@@ -58,7 +79,6 @@ export default function Posts() {
       refetch();
     } catch (e) {
       toast({ title: "Falha ao publicar", variant: "destructive" });
-    } finally {
       setPublishingIds((current) => {
         const next = new Set(current);
         next.delete(id);
@@ -70,6 +90,7 @@ export default function Posts() {
   const statusColors = {
     draft: "bg-muted text-muted-foreground border-border",
     scheduled: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
+    publishing: "bg-primary/10 text-primary border-primary/20",
     published: "bg-green-500/10 text-green-400 border-green-500/20",
     failed: "bg-destructive/10 text-destructive border-destructive/20"
   };
@@ -93,6 +114,7 @@ export default function Posts() {
               <SelectItem value="all">Todos os Posts</SelectItem>
               <SelectItem value="published">Publicados</SelectItem>
               <SelectItem value="scheduled">Agendados</SelectItem>
+              <SelectItem value="publishing">Publicando</SelectItem>
               <SelectItem value="draft">Rascunhos</SelectItem>
               <SelectItem value="failed">Com Falha</SelectItem>
             </SelectContent>
@@ -131,15 +153,19 @@ export default function Posts() {
                   errorMessage: null,
                 }
               );
-              const completedPlatforms = resultsByPlatform.filter(
-                (result) => result.status === "success" || result.status === "failed"
-              ).length;
               const progressPercent = post.platforms.length > 0
-                ? Math.round((completedPlatforms / post.platforms.length) * 100)
+                ? Math.round(
+                    resultsByPlatform.reduce(
+                      (total, result) =>
+                        total + (result.progress ?? (result.status === "success" || result.status === "failed" ? 100 : 0)),
+                      0,
+                    ) / post.platforms.length,
+                  )
                 : 0;
-              // A persisted pending result is historical data until the user
-              // explicitly starts a new publication in this session.
-              const isPublishing = publishingIds.has(post.id);
+              const isPublishing = publishingIds.has(post.id) || post.status === "publishing";
+              const activeResult = resultsByPlatform.find(
+                (result) => result.status === "pending" && (result.progress ?? 0) < 100,
+              );
 
               return (
             <Card key={post.id} className="bg-card border-border/50 overflow-hidden hover:border-border transition-colors group">
@@ -194,7 +220,9 @@ export default function Posts() {
                   {isPublishing && (
                     <div className="mt-4 space-y-2 rounded-lg border border-primary/20 bg-primary/5 p-3">
                       <div className="flex items-center justify-between gap-3 text-xs">
-                        <span className="font-semibold text-white">Publicando nas plataformas...</span>
+                           <span className="font-semibold text-white">
+                             {activeResult?.stage || "Publicando nas plataformas..."}
+                           </span>
                         <span className="font-bold text-primary">{progressPercent}%</span>
                       </div>
                       <Progress value={progressPercent} className="h-2 bg-primary/10" />
@@ -205,13 +233,16 @@ export default function Posts() {
                             className={`flex items-center gap-1 ${
                               result.status === "success" ? "text-green-400" :
                               result.status === "failed" ? "text-destructive" :
-                              "text-muted-foreground"
+                               "text-muted-foreground"
                             }`}
                           >
                             {result.status === "success" ? <CheckCircle2 size={12} /> :
                               result.status === "failed" ? <AlertCircle size={12} /> :
                               <Loader2 size={12} className="animate-spin" />}
-                            {result.platform}
+                            <span className="capitalize">{result.platform}</span>
+                            {result.status === "pending" && result.progress !== undefined && (
+                              <span className="text-muted-foreground">{result.progress}%</span>
+                            )}
                           </span>
                         ))}
                       </div>
