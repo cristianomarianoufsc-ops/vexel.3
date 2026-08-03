@@ -52,6 +52,8 @@ git diff --check
 
 O build do API é a validação principal usada no deploy. O typecheck completo pode continuar exibindo erros antigos de exports nos pacotes compartilhados; não confundir esses erros conhecidos com uma falha do build do backend.
 
+Regra obrigatória de entrega: toda alteração solicitada deve ser validada e sincronizada na branch `main` do repositório GitHub conectado ao Vercel antes de ser considerada concluída. A resposta final deve confirmar o commit remoto. O remote interno `gitsafe-backup` não conta como push para o GitHub.
+
 Workflows registrados no Replit:
 
 - `artifacts/vexelhub: web`
