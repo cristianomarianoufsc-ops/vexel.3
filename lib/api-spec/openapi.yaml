@@ -106,7 +106,7 @@ paths:
           in: query
           schema:
             type: string
-            enum: [draft, scheduled, published, failed]
+            enum: [draft, scheduled, publishing, published, failed]
       responses:
         "200":
           description: Posts list
@@ -201,8 +201,8 @@ paths:
           schema:
             type: integer
       responses:
-        "200":
-          description: Publish results per platform
+        "202":
+          description: Publication job accepted; progress is available on the post
           content:
             application/json:
               schema:
@@ -393,6 +393,20 @@ components:
         status:
           type: string
           enum: [pending, success, failed]
+        progress:
+          type: number
+          minimum: 0
+          maximum: 100
+        stage:
+          type: string
+        bytesSent:
+          type: ["integer", "null"]
+          minimum: 0
+        bytesTotal:
+          type: ["integer", "null"]
+          minimum: 0
+        postId:
+          type: ["string", "null"]
         postUrl:
           type: ["string", "null"]
         errorMessage:
@@ -414,7 +428,7 @@ components:
           type: ["string", "null"]
         status:
           type: string
-          enum: [draft, scheduled, published, failed]
+          enum: [draft, scheduled, publishing, published, failed]
         platforms:
           type: array
           items:
