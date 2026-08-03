@@ -116,6 +116,7 @@ export const CreatePostBody = zod.object({
   "title": zod.string(),
   "caption": zod.string(),
   "videoObjectPath": zod.string().nullish(),
+  "thumbnailUrl": zod.string().nullish(),
   "platforms": zod.array(zod.string()),
   "scheduledAt": zod.string().nullish()
 })
@@ -434,7 +435,8 @@ export const RequestUploadUrlBody = zod.object({
 
 export const RequestUploadUrlResponse = zod.object({
   "uploadURL": zod.string(),
-  "objectPath": zod.string()
+  "objectPath": zod.string(),
+  "publicURL": zod.string()
 })
 
 
