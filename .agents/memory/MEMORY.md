@@ -3,3 +3,5 @@
 - [OpenAPI codegen e Zod](openapi-codegen-zod.md) — o Orval instalado pode gerar zod.int(), incompatível com o Zod usado; validar e não commitar essa saída.
 - [Async publishing UI state](async-publishing-ui-state.md) — estados pending persistidos não significam operação ativa; a barra só deve abrir após ação explícita nesta sessão.
 - [Persisted publishing jobs](persisted-publishing-jobs.md) — publicação usa status publishing e progresso por plataforma persistidos no post para sobreviver a reloads.
+- [Video thumbnails](video-thumbnails.md) — capas são extraídas no navegador, enviadas pelo upload de assets e persistidas no post; posts antigos usam fallback.
+- [Clerk API bearer bridge](clerk-api-bearer.md) — frontend Vercel/Fly envia o token da sessão Clerk ao cliente da API, mantendo cookies incluídos.
