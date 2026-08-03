@@ -1,5 +1,5 @@
-const YOUTUBE_UPLOAD_URL =
-  "https://www.googleapis.com/upload/youtube/v3/videos?uploadType=multipart&part=snippet,status";
+const YOUTUBE_RESUMABLE_UPLOAD_URL =
+  "https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 
 type YouTubeVideoResponse = {
@@ -114,8 +114,8 @@ export async function uploadVideoToYouTube(options: {
   description: string;
   video: Buffer;
   contentType: string;
+  onProgress?: (progress: number, stage: string, bytesSent: number, bytesTotal: number) => void | Promise<void>;
 }): Promise<{ videoId: string; url: string }> {
-  const boundary = `vexelhub-${crypto.randomUUID()}`;
   const metadata = JSON.stringify({
     snippet: {
       title: options.title,
@@ -129,34 +129,83 @@ export async function uploadVideoToYouTube(options: {
     },
   });
 
-  const header = Buffer.from(
-    `--${boundary}\r\n` +
-      "Content-Type: application/json; charset=UTF-8\r\n\r\n" +
-      `${metadata}\r\n` +
-      `--${boundary}\r\n` +
-      `Content-Type: ${options.contentType || "video/*"}\r\n\r\n`,
-    "utf8",
-  );
-  const footer = Buffer.from(`\r\n--${boundary}--\r\n`, "utf8");
-  const body = Buffer.concat([header, options.video, footer]);
+  if (options.video.length === 0) {
+    throw new Error("O vídeo enviado está vazio.");
+  }
 
-  const response = await fetch(YOUTUBE_UPLOAD_URL, {
+  // Resumable uploads let the UI report bytes sent instead of waiting for a
+  // single multipart request to finish. Chunks are aligned to Google's
+  // required 256 KiB boundary, with a small enough size for smooth updates.
+  const response = await fetch(YOUTUBE_RESUMABLE_UPLOAD_URL, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${options.accessToken}`,
-      "Content-Type": `multipart/related; boundary=${boundary}`,
-      "Content-Length": String(body.byteLength),
+      "Content-Type": "application/json; charset=UTF-8",
+      "X-Upload-Content-Type": options.contentType || "video/*",
+      "X-Upload-Content-Length": String(options.video.length),
     },
-    body,
+    body: metadata,
   });
-  const data = (await response.json()) as YouTubeVideoResponse;
-
-  if (!response.ok || !data.id) {
+  if (!response.ok) {
+    const data = (await response.json().catch(() => ({}))) as YouTubeVideoResponse;
     throw new Error(getYouTubeError(data));
   }
 
+  const uploadUrl = response.headers.get("location");
+  if (!uploadUrl) {
+    throw new Error("O YouTube não retornou a URL da sessão de upload.");
+  }
+
+  await options.onProgress?.(5, "Enviando vídeo", 0, options.video.length);
+
+  const chunkSize = 4 * 1024 * 1024;
+  let uploadedBytes = 0;
+  let finalData: YouTubeVideoResponse | null = null;
+
+  while (uploadedBytes < options.video.length) {
+    const endExclusive = Math.min(uploadedBytes + chunkSize, options.video.length);
+    const chunk = options.video.subarray(uploadedBytes, endExclusive);
+    const endInclusive = endExclusive - 1;
+    const chunkResponse = await fetch(uploadUrl, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${options.accessToken}`,
+        "Content-Type": options.contentType || "video/*",
+        "Content-Length": String(chunk.length),
+        "Content-Range": `bytes ${uploadedBytes}-${endInclusive}/${options.video.length}`,
+      },
+      body: chunk,
+    });
+
+    if (chunkResponse.status === 308) {
+      uploadedBytes = endExclusive;
+      await options.onProgress?.(
+        5 + Math.round((uploadedBytes / options.video.length) * 85),
+        "Enviando vídeo",
+        uploadedBytes,
+        options.video.length,
+      );
+      continue;
+    }
+
+    const data = (await chunkResponse.json().catch(() => ({}))) as YouTubeVideoResponse;
+    if (!chunkResponse.ok) {
+      throw new Error(getYouTubeError(data));
+    }
+
+    uploadedBytes = endExclusive;
+    finalData = data;
+    await options.onProgress?.(90, "Processando no YouTube", uploadedBytes, options.video.length);
+  }
+
+  if (!finalData?.id) {
+    throw new Error("O YouTube concluiu o envio, mas não retornou o ID do vídeo.");
+  }
+
+  await options.onProgress?.(100, "Concluído", options.video.length, options.video.length);
+
   return {
-    videoId: data.id,
-    url: `https://www.youtube.com/watch?v=${data.id}`,
+    videoId: finalData.id,
+    url: `https://www.youtube.com/watch?v=${finalData.id}`,
   };
 }
