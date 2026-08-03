@@ -32,7 +32,11 @@ export function Sidebar() {
     <aside className="w-64 bg-sidebar border-r border-sidebar-border h-[100dvh] flex flex-col sticky top-0">
       <div className="h-16 flex items-center px-6 border-b border-sidebar-border">
         <Link href="/dashboard" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
-          <img src={`${basePath}/logo.svg`} alt="VexelHub" className="h-8 w-auto object-contain" />
+          <img
+            src={`${basePath}/vexelhub-logo.png`}
+            alt="VexelHub"
+            className="h-8 w-auto max-w-[142px] object-contain"
+          />
         </Link>
       </div>
 
