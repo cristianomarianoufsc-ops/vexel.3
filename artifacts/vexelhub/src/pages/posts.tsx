@@ -172,9 +172,16 @@ export default function Posts() {
               <CardContent className="p-0 sm:flex items-stretch">
                 <div className="w-full sm:w-48 h-48 sm:h-auto bg-muted shrink-0 relative flex items-center justify-center border-r border-border/50">
                   {post.thumbnailUrl ? (
-                    <img src={post.thumbnailUrl} alt={post.title} className="w-full h-full object-cover" />
+                    <img
+                      src={post.thumbnailUrl}
+                      alt={`Miniatura de ${post.title}`}
+                      className="w-full h-full object-cover"
+                    />
                   ) : (
-                    <FileVideo size={32} className="text-muted-foreground" />
+                    <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                      <FileVideo size={32} />
+                      <span className="text-[11px]">Sem miniatura</span>
+                    </div>
                   )}
                   <div className="absolute top-2 left-2">
                     <Badge variant="outline" className={`${statusColors[post.status as keyof typeof statusColors]} font-bold`}>
