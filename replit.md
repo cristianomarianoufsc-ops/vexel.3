@@ -44,6 +44,7 @@ Users authenticate with Clerk, upload short videos, write captions, choose platf
 
 - Preserve the current Vercel/Fly/Clerk/Neon/Supabase architecture unless explicitly asked to migrate it.
 - Keep platform credentials in secure environment secrets, never in Git or chat.
+- Every requested change must be validated and synchronized to the `main` branch of the GitHub repository connected to Vercel before it is reported as complete. Always confirm the remote commit.
 
 ## Gotchas
 
@@ -51,6 +52,7 @@ Users authenticate with Clerk, upload short videos, write captions, choose platf
 - Build the API before deploying and prefer `flyctl deploy ... --local-only .` if the Fly remote builder returns registry `401`.
 - Do not restore the old global Instagram-token bootstrap; new users must connect their own Instagram account.
 - Read `PROJECT_HANDOFF.md` before continuing platform integration work.
+- A local change is not complete until it has been pushed to the GitHub `main` used by Vercel. The internal `gitsafe-backup` remote is not a substitute.
 
 ## Pointers
 
