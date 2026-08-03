@@ -27,6 +27,7 @@ export default function Publish() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [objectPath, setObjectPath] = useState<string | null>(null);
+  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
 
   const { data: platforms = [] } = useListPlatforms();
   const requestUploadUrl = useRequestUploadUrl();
@@ -44,6 +45,7 @@ export default function Publish() {
       }
       setFile(selected);
       setObjectPath(null);
+      setThumbnailUrl(null);
       setUploadProgress(0);
     }
   };
@@ -62,13 +64,87 @@ export default function Publish() {
       }
       setFile(selected);
       setObjectPath(null);
+      setThumbnailUrl(null);
       setUploadProgress(0);
     }
   };
 
-  const performUpload = async (): Promise<string | null> => {
+  const captureVideoThumbnail = async (videoFile: File): Promise<Blob | null> => {
+    const objectUrl = URL.createObjectURL(videoFile);
+    try {
+      const video = document.createElement("video");
+      video.preload = "metadata";
+      video.muted = true;
+      video.playsInline = true;
+      video.src = objectUrl;
+
+      await new Promise<void>((resolve, reject) => {
+        const timeout = window.setTimeout(() => reject(new Error("Tempo excedido ao gerar miniatura")), 15000);
+        video.onloadeddata = () => {
+          window.clearTimeout(timeout);
+          resolve();
+        };
+        video.onerror = () => {
+          window.clearTimeout(timeout);
+          reject(new Error("Não foi possível ler o vídeo para gerar miniatura"));
+        };
+      });
+
+      const canvas = document.createElement("canvas");
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      if (!canvas.width || !canvas.height) return null;
+
+      const context = canvas.getContext("2d");
+      if (!context) return null;
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      return await new Promise<Blob | null>((resolve) => {
+        canvas.toBlob(resolve, "image/jpeg", 0.84);
+      });
+    } finally {
+      URL.revokeObjectURL(objectUrl);
+    }
+  };
+
+  const uploadThumbnail = async (videoFile: File): Promise<string | null> => {
+    try {
+      const thumbnail = await captureVideoThumbnail(videoFile);
+      if (!thumbnail) return null;
+
+      const { uploadURL, publicURL } = await requestUploadUrl.mutateAsync({
+        data: {
+          name: `${videoFile.name.replace(/\.[^/.]+$/, "")}-thumbnail.jpg`,
+          size: thumbnail.size,
+          contentType: "image/jpeg",
+        },
+      });
+
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.addEventListener("load", () => {
+          if (xhr.status >= 200 && xhr.status < 300) resolve();
+          else reject(new Error(`Falha ao enviar a miniatura (${xhr.status})`));
+        });
+        xhr.addEventListener("error", () => reject(new Error("Falha ao enviar a miniatura")));
+        xhr.open("PUT", uploadURL);
+        xhr.setRequestHeader("Content-Type", "image/jpeg");
+        xhr.send(thumbnail);
+      });
+
+      return publicURL;
+    } catch (error) {
+      console.warn("Miniatura não pôde ser gerada; o post continuará sem capa.", error);
+      return null;
+    }
+  };
+
+  const performUpload = async (): Promise<{
+    objectPath: string;
+    thumbnailUrl: string | null;
+  } | null> => {
     if (!file) return null;
-    if (objectPath) return objectPath;
+    if (objectPath) return { objectPath, thumbnailUrl };
 
     setIsUploading(true);
     setUploadProgress(10);
@@ -103,9 +179,11 @@ export default function Publish() {
         xhr.send(file);
       });
 
-      setUploadProgress(100);
       setObjectPath(path);
-      return path;
+      const generatedThumbnailUrl = await uploadThumbnail(file);
+      setThumbnailUrl(generatedThumbnailUrl);
+      setUploadProgress(100);
+      return { objectPath: path, thumbnailUrl: generatedThumbnailUrl };
     } catch (err) {
       console.error(err);
       toast({
@@ -125,8 +203,11 @@ export default function Publish() {
     try {
       setIsUploading(true);
       let finalObjectPath = objectPath;
+      let finalThumbnailUrl = thumbnailUrl;
       if (file && !finalObjectPath) {
-        finalObjectPath = await performUpload();
+        const uploaded = await performUpload();
+        finalObjectPath = uploaded?.objectPath ?? null;
+        finalThumbnailUrl = uploaded?.thumbnailUrl ?? null;
       }
 
       await createPost.mutateAsync({
@@ -135,6 +216,7 @@ export default function Publish() {
           caption,
           platforms: selectedPlatforms,
           videoObjectPath: finalObjectPath,
+          thumbnailUrl: finalThumbnailUrl,
           scheduledAt: isScheduled && scheduledAt ? new Date(scheduledAt).toISOString() : undefined
         }
       });
