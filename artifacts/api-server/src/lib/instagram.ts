@@ -26,6 +26,8 @@ type InstagramContainerStatus = {
   status?: string;
 };
 
+type InstagramProgressReporter = (progress: number, stage: string) => void | Promise<void>;
+
 type InstagramTokenResponse = {
   access_token?: string;
   user_id?: string;
@@ -153,8 +155,11 @@ export async function waitForInstagramContainer(options: {
   containerId: string;
   accessToken: string;
   timeoutMs?: number;
+  onProgress?: InstagramProgressReporter;
 }): Promise<void> {
-  const deadline = Date.now() + (options.timeoutMs ?? 180_000);
+  const timeoutMs = options.timeoutMs ?? 180_000;
+  const startedAt = Date.now();
+  const deadline = startedAt + timeoutMs;
   let lastStatus = "IN_PROGRESS";
 
   while (Date.now() < deadline) {
@@ -163,6 +168,11 @@ export async function waitForInstagramContainer(options: {
       options.accessToken,
     );
     lastStatus = status.status_code || status.status || lastStatus;
+    const elapsedRatio = Math.min(1, (Date.now() - startedAt) / timeoutMs);
+    await options.onProgress?.(
+      Math.min(85, 35 + Math.round(elapsedRatio * 50)),
+      "Processando no Instagram",
+    );
 
     if (lastStatus === "FINISHED") return;
     if (["ERROR", "EXPIRED", "PUBLISHED"].includes(lastStatus)) {
@@ -216,15 +226,22 @@ export async function uploadInstagramReel(options: {
   accessToken: string;
   videoUrl: string;
   caption: string;
+  onProgress?: InstagramProgressReporter;
 }): Promise<{ mediaId: string; url: string }> {
+  await options.onProgress?.(10, "Preparando vídeo");
   const { containerId } = await createInstagramReel(options);
+  await options.onProgress?.(30, "Vídeo recebido pelo Instagram");
   await waitForInstagramContainer({
     containerId,
     accessToken: options.accessToken,
+    onProgress: options.onProgress,
   });
-  return publishInstagramReel({
+  await options.onProgress?.(90, "Confirmando publicação");
+  const result = await publishInstagramReel({
     accountId: options.accountId,
     accessToken: options.accessToken,
     containerId,
   });
+  await options.onProgress?.(100, "Concluído");
+  return result;
 }
