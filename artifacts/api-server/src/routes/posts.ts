@@ -70,7 +70,7 @@ router.post("/posts", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
-  const { title, caption, videoObjectPath, platforms, scheduledAt } = parsed.data;
+  const { title, caption, videoObjectPath, thumbnailUrl, platforms, scheduledAt } = parsed.data;
 
   const status = scheduledAt ? "scheduled" : "draft";
 
@@ -81,6 +81,7 @@ router.post("/posts", requireAuth, async (req, res): Promise<void> => {
       title,
       caption,
       videoObjectPath: videoObjectPath ?? null,
+      thumbnailUrl: thumbnailUrl ?? null,
       platforms: platforms as string[],
       status,
       scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
