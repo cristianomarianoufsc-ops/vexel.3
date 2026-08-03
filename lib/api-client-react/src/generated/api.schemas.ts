@@ -112,6 +112,8 @@ export interface PostInput {
   caption: string;
   /** @nullable */
   videoObjectPath?: string | null;
+  /** @nullable */
+  thumbnailUrl?: string | null;
   platforms: string[];
   /** @nullable */
   scheduledAt?: string | null;
@@ -192,6 +194,7 @@ export interface UploadRequest {
 export interface UploadResponse {
   uploadURL: string;
   objectPath: string;
+  publicURL: string;
 }
 
 export type ListPostsParams = {
