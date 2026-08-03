@@ -8,13 +8,18 @@ export const postsTable = pgTable("posts", {
   caption: text("caption").notNull().default(""),
   videoObjectPath: text("video_object_path"),
   thumbnailUrl: text("thumbnail_url"),
-  status: text("status").notNull().default("draft"), // draft | scheduled | published | failed
+  status: text("status").notNull().default("draft"), // draft | scheduled | publishing | published | failed
   platforms: json("platforms").$type<string[]>().notNull().default([]),
   scheduledAt: timestamp("scheduled_at"),
   publishedAt: timestamp("published_at"),
   platformResults: json("platform_results").$type<Array<{
     platform: string;
     status: string;
+    progress?: number;
+    stage?: string;
+    bytesSent?: number | null;
+    bytesTotal?: number | null;
+    postId: string | null;
     postUrl: string | null;
     errorMessage: string | null;
   }>>().notNull().default([]),
