@@ -49,10 +49,10 @@ Users authenticate with Clerk, upload short videos, write captions, choose platf
 ## Gotchas
 
 - Use pnpm, not npm or yarn.
-- Build the API before deploying and prefer `flyctl deploy ... --local-only .` if the Fly remote builder returns registry `401`.
+- The backend deploys to Fly automatically via GitHub Actions (`.github/workflows/deploy-api.yml`, secret `FLY_API_TOKEN`) on every push to `main` that touches backend code. Manual fallback: `flyctl deploy ... --local-only .` (see `PROJECT_HANDOFF.md`).
 - Do not restore the old global Instagram-token bootstrap; new users must connect their own Instagram account.
 - Read `PROJECT_HANDOFF.md` before continuing platform integration work.
-- A local change is not complete until it has been pushed to the GitHub `main` used by Vercel. The internal `gitsafe-backup` remote is not a substitute.
+- A local change is not complete until it has been pushed to the GitHub `main` used by Vercel, and backend changes are not live until the Deploy API workflow succeeds.
 
 ## Pointers
 

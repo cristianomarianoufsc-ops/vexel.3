@@ -54,13 +54,7 @@ O build do API é a validação principal usada no deploy. O typecheck completo 
 
 Regra obrigatória de entrega: toda alteração solicitada deve ser validada e sincronizada na branch `main` do repositório GitHub conectado ao Vercel antes de ser considerada concluída. A resposta final deve confirmar o commit remoto. O remote interno `gitsafe-backup` não conta como push para o GitHub.
 
-Workflows registrados no Replit:
-
-- `artifacts/vexelhub: web`
-- `artifacts/api-server: API Server`
-- `artifacts/mockup-sandbox: Component Preview Server`
-
-Depois de alterar código do backend, reinicie `artifacts/api-server: API Server` antes de testar o preview.
+O projeto não roda mais no Replit. O frontend aceita `PORT` e `BASE_PATH` opcionais (padrão `5173` e `/`). Depois de alterar código do backend, reinicie o processo `pnpm --filter @workspace/api-server run dev` antes de testar localmente.
 
 ## 4. Autenticação e isolamento por usuário
 
@@ -228,7 +222,21 @@ pnpm --filter @workspace/api-server deploy --prod --legacy /prod
 
 Isso garante que a imagem final tenha a árvore de dependências de produção do workspace da API.
 
-Método que funcionou neste ambiente:
+### Deploy automático (padrão)
+
+O projeto não depende mais do Replit. O deploy do backend é feito pelo GitHub Actions em `.github/workflows/deploy-api.yml`:
+
+- dispara a cada push na `main` que altere `artifacts/api-server/**`, `lib/**`, `scripts/**`, `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml` ou `tsconfig.base.json`;
+- também pode ser disparado manualmente em **Actions → Deploy API (Fly.io) → Run workflow**;
+- usa o secret do repositório `FLY_API_TOKEN` (deploy token do app `vexelhub-api`);
+- monta a imagem no runner do GitHub (`--local-only`), evitando o builder remoto do Fly;
+- termina com health check em `/api/healthz`.
+
+O frontend continua sendo publicado automaticamente pela integração GitHub → Vercel.
+
+### Deploy manual (fallback)
+
+Em uma máquina com `flyctl` autenticado e Docker:
 
 ```bash
 flyctl deploy \

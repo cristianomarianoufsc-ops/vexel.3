@@ -1,0 +1,62 @@
+name: Deploy API (Fly.io)
+
+# Deploys artifacts/api-server to the Fly app `vexelhub-api` whenever
+# backend-related code lands on main. The frontend is deployed separately
+# by Vercel's GitHub integration.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "artifacts/api-server/**"
+      - "lib/**"
+      - "scripts/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "tsconfig.base.json"
+      - ".github/workflows/deploy-api.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-api
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build and deploy to Fly
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      # Build the image on the GitHub runner (Docker is available here) instead of
+      # Fly's remote builder, which has returned registry 401 errors for this app.
+      - name: Deploy
+        run: >
+          flyctl deploy
+          --app vexelhub-api
+          --config artifacts/api-server/fly.toml
+          --dockerfile artifacts/api-server/Dockerfile
+          --local-only
+          --wait-timeout 300
+          .
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Health check
+        run: |
+          for i in 1 2 3 4 5 6; do
+            if curl -fsS https://vexelhub-api.fly.dev/api/healthz; then
+              echo
+              echo "API is healthy"
+              exit 0
+            fi
+            echo "Health check failed (attempt $i), retrying in 10s..."
+            sleep 10
+          done
+          echo "API health check failed after deploy" >&2
+          exit 1
