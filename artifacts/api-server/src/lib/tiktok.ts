@@ -272,6 +272,27 @@ async function queryCreatorInfo(accessToken: string): Promise<TikTokCreatorInfo>
   return creatorInfo;
 }
 
+/**
+ * Best-effort lookup of the connected creator's display name. Uses the
+ * creator_info endpoint (covered by the `video.publish` scope) so the
+ * optional `user.info.basic` scope is not required. Never throws.
+ */
+export async function getTikTokCreatorName(accessToken: string): Promise<string | null> {
+  try {
+    const info = await queryCreatorInfo(accessToken);
+    const username = info.creator_username?.trim();
+    const nickname = info.creator_nickname?.trim();
+    if (username) return `@${username}`;
+    return nickname || null;
+  } catch (error) {
+    logger.warn(
+      { event: "tiktok.creator_info.failed", error: safeLogError(error) },
+      "TikTok creator info lookup failed",
+    );
+    return null;
+  }
+}
+
 async function initializeVideoPublish(options: {
   accessToken: string;
   videoSize: number;

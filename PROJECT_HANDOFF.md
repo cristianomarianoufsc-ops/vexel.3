@@ -186,7 +186,8 @@ A integração TikTok está implementada e validada em publicação real por usu
 O OAuth e a publicação real foram implementados em `artifacts/api-server/src/routes/platforms.ts`, `artifacts/api-server/src/lib/tiktok.ts` e `artifacts/api-server/src/routes/posts.ts`. O fluxo usa:
 
 - `TIKTOK_CLIENT_KEY`
-- callback em `/api/platforms/tiktok/callback`;
+- callback em `/api/platforms/tiktok/callback` (rota `GET` em `platforms.ts`, troca o `code` via `exchangeTikTokCode`, salva tokens/`open_id` por usuário e usa `creator_info` para o nome da conta);
+- scopes configuráveis via `TIKTOK_SCOPES` (padrão `video.publish,video.upload`);
 - scopes `video.publish` e `video.upload`; o `open_id` retornado pelo OAuth identifica a conta sem depender do scope opcional `user.info.basic`;
 - renovação de access token via refresh token;
 - consulta de `creator_info/query` para respeitar as opções de privacidade da conta;

@@ -8,6 +8,21 @@ import {
   getInstagramProfile,
   getLongLivedInstagramToken,
 } from "../lib/instagram";
+import { exchangeTikTokCode, getTikTokCreatorName } from "../lib/tiktok";
+
+function getFrontendSettingsUrl(): string {
+  return process.env.PUBLIC_FRONTEND_URL
+    ? `${process.env.PUBLIC_FRONTEND_URL.replace(/\/+$/, "")}/settings`
+    : "https://vexel-2.vercel.app/settings";
+}
+
+function getTikTokRedirectUri(): string {
+  return `${getPublicApiUrl()}/api/platforms/tiktok/callback`;
+}
+
+// Scopes enabled on the TikTok app (Login Kit + Content Posting API).
+// Can be overridden with TIKTOK_SCOPES (comma-separated) if the app config changes.
+const TIKTOK_SCOPES = process.env.TIKTOK_SCOPES?.trim() || "video.publish,video.upload";
 
 const router: IRouter = Router();
 
@@ -77,8 +92,16 @@ router.post("/platforms/:platform/connect", requireAuth, async (req, res): Promi
     url = `https://www.instagram.com/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scope)}&response_type=code&state=${encodeURIComponent(req.userId)}`;
   } else if (platform === "tiktok") {
     const clientKey = process.env.TIKTOK_CLIENT_KEY || "";
-    const redirectUri = `${baseUrl}/api/platforms/tiktok/callback`;
-    url = `https://www.tiktok.com/v2/auth/authorize?client_key=${clientKey}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=user.info.basic,video.publish&state=${req.userId}`;
+    if (clientKey) {
+      const params = new URLSearchParams({
+        client_key: clientKey,
+        redirect_uri: getTikTokRedirectUri(),
+        response_type: "code",
+        scope: TIKTOK_SCOPES,
+        state: req.userId,
+      });
+      url = `https://www.tiktok.com/v2/auth/authorize/?${params.toString()}`;
+    }
   }
 
   if (!url) {
@@ -128,6 +151,52 @@ router.get("/platforms/instagram/callback", async (req, res): Promise<void> => {
   } catch (err) {
     console.error("Instagram callback error:", err);
     res.status(500).send("Erro interno ao processar conexão com Instagram");
+  }
+});
+
+router.get("/platforms/tiktok/callback", async (req, res): Promise<void> => {
+  const code = req.query.code as string | undefined;
+  const state = req.query.state as string | undefined;
+  const error = req.query.error as string | undefined;
+  const errorDescription = req.query.error_description as string | undefined;
+
+  if (error || !code || !state) {
+    res
+      .status(400)
+      .send(`Falha na autorização do TikTok: ${errorDescription || error || "code/state ausente"}`);
+    return;
+  }
+
+  try {
+    const token = await exchangeTikTokCode({
+      code,
+      redirectUri: getTikTokRedirectUri(),
+    });
+    const accountName = (await getTikTokCreatorName(token.accessToken)) || "TikTok";
+
+    const updated = await db
+      .update(platformsTable)
+      .set({
+        isConnected: true,
+        accountId: token.openId,
+        accountName,
+        accessToken: token.accessToken,
+        refreshToken: token.refreshToken,
+        tokenExpiresAt: new Date(Date.now() + token.expiresIn * 1000),
+        updatedAt: new Date(),
+      })
+      .where(and(eq(platformsTable.userId, state), eq(platformsTable.platform, "tiktok")))
+      .returning({ id: platformsTable.id });
+
+    if (updated.length === 0) {
+      res.status(400).send("Falha na autorização do TikTok: usuário do VexelHub não encontrado.");
+      return;
+    }
+
+    res.redirect(getFrontendSettingsUrl());
+  } catch (err) {
+    console.error("TikTok callback error:", err instanceof Error ? err.message : err);
+    res.status(500).send("Erro interno ao processar conexão com TikTok");
   }
 });
 
