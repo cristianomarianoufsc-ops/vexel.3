@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { useLocation } from "wouter";
-import { useCreatePost, useRequestUploadUrl, useListPlatforms } from "@workspace/api-client-react";
+import { useCreatePost, usePublishPost, useRequestUploadUrl, useListPlatforms } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,6 +32,7 @@ export default function Publish() {
   const { data: platforms = [] } = useListPlatforms();
   const requestUploadUrl = useRequestUploadUrl();
   const createPost = useCreatePost();
+  const publishPost = usePublishPost();
 
   const connectedPlatforms = platforms.filter(p => p.isConnected);
   const isFormValid = title.trim().length > 0 && selectedPlatforms.length > 0 && (objectPath !== null || file !== null);
@@ -226,7 +227,7 @@ export default function Publish() {
         finalThumbnailUrl = uploaded?.thumbnailUrl ?? null;
       }
 
-      await createPost.mutateAsync({
+      const created = await createPost.mutateAsync({
         data: {
           title,
           caption,
@@ -237,10 +238,18 @@ export default function Publish() {
         }
       });
 
-      toast({
-        title: "Post criado!",
-        description: "Post criado com sucesso.",
-      });
+      if (!isScheduled) {
+        await publishPost.mutateAsync({ id: created.id });
+        toast({
+          title: "Publicação iniciada!",
+          description: "Seu vídeo já está sendo enviado para as plataformas selecionadas.",
+        });
+      } else {
+        toast({
+          title: "Post agendado!",
+          description: "Agendamento salvo com sucesso.",
+        });
+      }
       setLocation("/posts");
     } catch (err) {
       console.error(err);
