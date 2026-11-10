@@ -2,9 +2,12 @@ import { db, postsTable } from "@workspace/db";
 import { eq, and, lte } from "drizzle-orm";
 import { logger } from "./logger";
 import { runPublishJob, type PublishPlatformResult } from "../routes/posts";
+import { pingSupabaseStorage } from "./supabaseStorage";
 
 let schedulerTimer: NodeJS.Timeout | null = null;
 let isChecking = false;
+let lastSupabasePingAt = 0;
+const SUPABASE_PING_INTERVAL_MS = 12 * 60 * 60 * 1000; // 12 hours
 
 /**
  * Process all scheduled posts that have reached their scheduled publish time.
@@ -113,10 +116,22 @@ export function startScheduler(intervalMs = 30_000): void {
   // Initial check 5s after boot
   setTimeout(() => {
     void processDueScheduledPosts();
+    void pingSupabaseStorage().then((ok) => {
+      if (ok) lastSupabasePingAt = Date.now();
+    });
   }, 5_000);
 
   schedulerTimer = setInterval(() => {
     void processDueScheduledPosts();
+
+    if (Date.now() - lastSupabasePingAt > SUPABASE_PING_INTERVAL_MS) {
+      void pingSupabaseStorage().then((ok) => {
+        if (ok) {
+          lastSupabasePingAt = Date.now();
+          logger.info("Keep-alive do Supabase Storage executado com sucesso");
+        }
+      });
+    }
   }, intervalMs);
 }
 

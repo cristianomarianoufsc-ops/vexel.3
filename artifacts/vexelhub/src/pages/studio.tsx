@@ -924,10 +924,23 @@ export default function Studio() {
                           <span className="hidden sm:inline">YouTube Shorts</span>
                         </p>
                         {isConnected ? (
-                          <p className="text-[10px] sm:text-[11px] text-green-400 font-medium truncate flex items-center justify-center gap-1 mt-0.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-green-400 shrink-0" />
-                            <span className="truncate">{yt?.accountName || "Conectado"}</span>
-                          </p>
+                          <div className="flex flex-col items-center">
+                            <p className="text-[10px] sm:text-[11px] text-green-400 font-medium truncate flex items-center justify-center gap-1 mt-0.5 max-w-full">
+                              <span className="w-1.5 h-1.5 rounded-full bg-green-400 shrink-0" />
+                              <span className="truncate">{yt?.accountName || "Conectado"}</span>
+                            </p>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleConnectPlatform("youtube");
+                              }}
+                              className="text-[9px] text-muted-foreground hover:text-white underline mt-0.5"
+                              title="Reconectar conta do YouTube"
+                            >
+                              reconectar
+                            </button>
+                          </div>
                         ) : (
                           <button
                             type="button"
@@ -983,10 +996,23 @@ export default function Studio() {
                           <span className="hidden sm:inline">Instagram Reels</span>
                         </p>
                         {isConnected ? (
-                          <p className="text-[10px] sm:text-[11px] text-green-400 font-medium truncate flex items-center justify-center gap-1 mt-0.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-green-400 shrink-0" />
-                            <span className="truncate">{ig?.accountName ? `@${ig.accountName}` : "Conectado"}</span>
-                          </p>
+                          <div className="flex flex-col items-center">
+                            <p className="text-[10px] sm:text-[11px] text-green-400 font-medium truncate flex items-center justify-center gap-1 mt-0.5 max-w-full">
+                              <span className="w-1.5 h-1.5 rounded-full bg-green-400 shrink-0" />
+                              <span className="truncate">{ig?.accountName ? `@${ig.accountName}` : "Conectado"}</span>
+                            </p>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleConnectPlatform("instagram");
+                              }}
+                              className="text-[9px] text-muted-foreground hover:text-white underline mt-0.5"
+                              title="Reconectar conta do Instagram"
+                            >
+                              reconectar
+                            </button>
+                          </div>
                         ) : (
                           <button
                             type="button"
@@ -1033,7 +1059,7 @@ export default function Studio() {
                       )}
 
                       <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white/10 flex items-center justify-center text-white shrink-0 mb-1 sm:mb-1.5 mt-0.5">
-                        <SiTiktok size={18} />
+                        <SiTiktok size={16} />
                       </div>
 
                       <div className="w-full">
@@ -1041,10 +1067,23 @@ export default function Studio() {
                           TikTok
                         </p>
                         {isConnected ? (
-                          <p className="text-[10px] sm:text-[11px] text-green-400 font-medium truncate flex items-center justify-center gap-1 mt-0.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-green-400 shrink-0" />
-                            <span className="truncate">{tt?.accountName || "Conectado"}</span>
-                          </p>
+                          <div className="flex flex-col items-center">
+                            <p className="text-[10px] sm:text-[11px] text-green-400 font-medium truncate flex items-center justify-center gap-1 mt-0.5 max-w-full">
+                              <span className="w-1.5 h-1.5 rounded-full bg-green-400 shrink-0" />
+                              <span className="truncate">{tt?.accountName || "Conectado"}</span>
+                            </p>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleConnectPlatform("tiktok");
+                              }}
+                              className="text-[9px] text-muted-foreground hover:text-white underline mt-0.5"
+                              title="Reconectar conta do TikTok"
+                            >
+                              reconectar
+                            </button>
+                          </div>
                         ) : (
                           <button
                             type="button"

@@ -120,3 +120,16 @@ export function isSupabaseStorageAvailable(): boolean {
         process.env.SUPABASE_SERVICE_ROLE_KEY),
   );
 }
+
+export async function pingSupabaseStorage(): Promise<boolean> {
+  if (!isSupabaseStorageAvailable()) return false;
+  try {
+    const supabase = getSupabaseClient();
+    const bucket = getBucket();
+    await supabase.storage.from(bucket).list("", { limit: 1 });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
