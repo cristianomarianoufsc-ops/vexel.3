@@ -1,14 +1,17 @@
 # VexelHub — Handoff para o próximo agente
 
+> **NOVO DIRECIONAMENTO E ESPECIFICAÇÃO DE PRODUTO:**
+> Consulte o arquivo [`PLANO_NOVO_LAYOUT_MINIMALISTA.md`](./PLANO_NOVO_LAYOUT_MINIMALISTA.md) para ver a especificação completa da nova interface minimalista 9:16 ("O Anti-Metricool"), modelo de precificação (R$ 14,90/mês), e o status 100% verde da análise da Meta.
+
 ## 1. O que é o projeto
 
 O VexelHub é um hub para criadores publicarem vídeos curtos em várias plataformas. O usuário entra com Clerk, envia um vídeo, escreve título/legenda, escolhe as plataformas e acompanha o resultado de cada publicação em um único lugar.
 
-Plataformas previstas:
+Plataformas com publicação real implementada:
 
 - YouTube Shorts — publicação real implementada.
-- Instagram Reels — publicação real implementada.
-- TikTok — interface e início do OAuth existem, mas publicação real ainda não foi implementada.
+- Instagram Reels — publicação real implementada (App Review da Meta com todos os 5 blocos verdes).
+- TikTok — OAuth e publicação real via Direct Post implementados.
 
 ## 2. Arquitetura e ambientes
 
