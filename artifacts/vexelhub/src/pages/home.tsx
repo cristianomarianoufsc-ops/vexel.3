@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { Zap, Repeat, Sparkles, ChevronRight, CalendarDays } from "lucide-react";
+import { Zap, Repeat, Sparkles, ChevronRight, CalendarDays, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function Home() {
@@ -15,6 +15,12 @@ export default function Home() {
           <img src={`${basePath}/logo.svg`} alt="VexelHub" className="h-8 w-auto object-contain" />
         </div>
         <div className="flex items-center gap-4">
+          <Link href="/studio">
+            <Button variant="ghost" className="text-muted-foreground hover:text-white flex items-center gap-1.5 text-sm">
+              <Smartphone size={16} className="text-primary" />
+              <span>Studio 9:16</span>
+            </Button>
+          </Link>
           <Link href="/sign-in">
             <Button variant="ghost" className="text-muted-foreground hover:text-white">Entrar</Button>
           </Link>

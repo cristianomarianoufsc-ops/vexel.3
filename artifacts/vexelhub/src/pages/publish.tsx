@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useCreatePost, usePublishPost, useRequestUploadUrl, useListPlatforms } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { UploadCloud, Video, CalendarIcon, Send, Sparkles, AlertCircle, RefreshCw } from "lucide-react";
+import { UploadCloud, Video, CalendarIcon, Send, Sparkles, AlertCircle, RefreshCw, Smartphone, ArrowRight } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -277,6 +277,28 @@ export default function Publish() {
           <UploadCloud className="text-primary" /> Nova Publicação
         </h1>
         <p className="text-muted-foreground">Envie seu vídeo e orquestre sua distribuição.</p>
+      </div>
+
+      {/* Banner de atalho para o novo Studio 9:16 Minimalista */}
+      <div className="p-4 rounded-2xl bg-gradient-to-r from-primary/20 via-purple-500/10 to-transparent border border-primary/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-md">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-primary/20 text-primary flex items-center justify-center shrink-0">
+            <Smartphone size={20} />
+          </div>
+          <div>
+            <h3 className="font-bold text-white text-sm sm:text-base flex items-center gap-2">
+              Conheça o novo Studio 9:16 Minimalista
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary text-white">NOVO</span>
+            </h3>
+            <p className="text-xs text-muted-foreground">O Anti-Metricool: publique em 15 segundos no Shorts, Reels e TikTok sem distrações.</p>
+          </div>
+        </div>
+        <Link href="/studio">
+          <Button size="sm" className="bg-primary hover:bg-primary/90 text-white font-semibold text-xs sm:text-sm shrink-0 gap-1.5 shadow-sm">
+            <span>Abrir Studio 9:16</span>
+            <ArrowRight size={14} />
+          </Button>
+        </Link>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">

@@ -1,16 +1,26 @@
+import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import { useListPlatforms, useConnectPlatform, useDisconnectPlatform } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Settings as SettingsIcon, Link2, Unlink2, ShieldCheck, AlertCircle } from "lucide-react";
+import { Settings as SettingsIcon, Link2, Unlink2, ShieldCheck, AlertCircle, Smartphone, ArrowRight } from "lucide-react";
 import { SiYoutube, SiInstagram, SiTiktok } from "react-icons/si";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Settings() {
+  const [, setLocation] = useLocation();
+  const [returnToStudio, setReturnToStudio] = useState(false);
   const { data: platforms = [], isLoading, refetch } = useListPlatforms();
   const connectPlatform = useConnectPlatform();
   const disconnectPlatform = useDisconnectPlatform();
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (sessionStorage.getItem("vexel_oauth_return_to") === "/studio") {
+      setReturnToStudio(true);
+    }
+  }, []);
 
   const handleConnect = async (platformId: 'youtube' | 'instagram' | 'tiktok') => {
     try {
@@ -54,6 +64,32 @@ export default function Settings() {
         </h1>
         <p className="text-muted-foreground">Conecte as plataformas. Configure o hub.</p>
       </div>
+
+      {returnToStudio && (
+        <div className="p-4 rounded-2xl bg-gradient-to-r from-primary/20 via-purple-500/15 to-transparent border border-primary/40 flex items-center justify-between gap-4 shadow-lg animate-in fade-in">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary/20 text-primary flex items-center justify-center shrink-0">
+              <Smartphone size={20} />
+            </div>
+            <div>
+              <h3 className="font-bold text-white text-sm sm:text-base">Pronto para publicar?</h3>
+              <p className="text-xs text-muted-foreground">Sua conta foi conectada. Volte para o Studio 9:16 para disparar seu vídeo.</p>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            onClick={() => {
+              sessionStorage.removeItem("vexel_oauth_return_to");
+              sessionStorage.setItem("vexel_just_connected", "true");
+              setLocation("/studio");
+            }}
+            className="bg-primary hover:bg-primary/90 text-white font-semibold text-xs sm:text-sm shrink-0 gap-1.5 shadow-md"
+          >
+            <span>Voltar ao Studio</span>
+            <ArrowRight size={14} />
+          </Button>
+        </div>
+      )}
 
       <Card className="bg-card border-border/50 shadow-lg">
         <CardHeader>

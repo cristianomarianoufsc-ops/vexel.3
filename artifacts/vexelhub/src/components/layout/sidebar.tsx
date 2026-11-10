@@ -8,11 +8,13 @@ import {
   Lightbulb, 
   FolderOpen, 
   Settings, 
-  LogOut 
+  LogOut,
+  Smartphone
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
+  { href: "/studio", label: "Studio 9:16", icon: Smartphone, isNew: true },
   { href: "/dashboard", label: "Painel", icon: LayoutDashboard },
   { href: "/publish", label: "Publicar", icon: UploadCloud },
   { href: "/posts", label: "Posts", icon: ListVideo },
@@ -55,7 +57,12 @@ export function Sidebar() {
               )}
             >
               <item.icon size={18} className={isActive ? "text-primary" : "text-sidebar-foreground/50"} />
-              {item.label}
+              <span className="flex-1">{item.label}</span>
+              {item.isNew && (
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-primary/20 text-primary border border-primary/30">
+                  NOVO
+                </span>
+              )}
             </Link>
           );
         })}

@@ -18,6 +18,7 @@ import Ideas from '@/pages/ideas';
 import Assets from '@/pages/assets';
 import Settings from '@/pages/settings';
 import Legal from '@/pages/legal';
+import Studio from '@/pages/studio';
 
 const queryClient = new QueryClient();
 
@@ -194,6 +195,8 @@ function ClerkProviderWithRoutes() {
         <TooltipProvider>
           <Switch>
             <Route path="/" component={HomeRedirect} />
+            <Route path="/studio" component={Studio} />
+            <Route path="/v2" component={Studio} />
             <Route path="/sign-in/*?" component={SignInPage} />
             <Route path="/sign-up/*?" component={SignUpPage} />
             <Route path="/terms" component={() => <Legal type="terms" />} />

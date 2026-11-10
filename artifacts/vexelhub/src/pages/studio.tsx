@@ -1,0 +1,1193 @@
+import { useState, useRef, useEffect } from "react";
+import { Link, useLocation } from "wouter";
+import { useUser, useClerk } from "@clerk/react";
+import { 
+  useListPlatforms, 
+  useConnectPlatform, 
+  useRequestUploadUrl, 
+  useCreatePost, 
+  usePublishPost,
+  getPost 
+} from "@workspace/api-client-react";
+import type { PlatformResult } from "@workspace/api-zod";
+import { 
+  UploadCloud, 
+  Plus, 
+  Sparkles, 
+  CheckCircle2, 
+  AlertCircle, 
+  Loader2, 
+  Play, 
+  Pause, 
+  Volume2, 
+  VolumeX, 
+  RefreshCw, 
+  Trash2, 
+  ExternalLink, 
+  Zap, 
+  Check, 
+  Crown, 
+  ArrowRight, 
+  LayoutDashboard, 
+  LogOut,
+  Smartphone,
+  Info
+} from "lucide-react";
+import { SiYoutube, SiInstagram, SiTiktok } from "react-icons/si";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+
+const QUICK_HASHTAGS = ["#shorts", "#reels", "#tiktok", "#viral", "#foryou", "#cortes", "#podcast", "#musica"];
+
+export default function Studio() {
+  const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+  const [, setLocation] = useLocation();
+  const { user, isSignedIn } = useUser();
+  const { signOut, openSignIn } = useClerk();
+  const { toast } = useToast();
+  
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Studio Form State
+  const [file, setFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [videoDuration, setVideoDuration] = useState<number | null>(null);
+  const [videoDimensions, setVideoDimensions] = useState<{ width: number; height: number } | null>(null);
+  const [isLandscape, setIsLandscape] = useState(false);
+  
+  const [title, setTitle] = useState("");
+  const [caption, setCaption] = useState("");
+  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(["youtube", "instagram", "tiktok"]);
+  
+  // Video Player Controls
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [isMuted, setIsMuted] = useState(true);
+  const [isDragging, setIsDragging] = useState(false);
+
+  // Publishing Workflow State
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [publishStep, setPublishStep] = useState<"uploading" | "thumbnail" | "distributing" | "done" | "error">("uploading");
+  const [statusMessage, setStatusMessage] = useState("");
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [livePlatformResults, setLivePlatformResults] = useState<PlatformResult[]>([]);
+  const [currentPostId, setCurrentPostId] = useState<number | null>(null);
+  const [isCelebrationOpen, setIsCelebrationOpen] = useState(false);
+
+  // API Hooks
+  const { data: platforms = [], refetch: refetchPlatforms } = useListPlatforms();
+  const connectPlatform = useConnectPlatform();
+  const requestUploadUrl = useRequestUploadUrl();
+  const createPost = useCreatePost();
+  const publishPost = usePublishPost();
+
+  // Restore draft or handle OAuth returns
+  useEffect(() => {
+    try {
+      const savedDraft = sessionStorage.getItem("vexel_studio_draft");
+      if (savedDraft) {
+        const parsed = JSON.parse(savedDraft);
+        if (parsed.title) setTitle(parsed.title);
+        if (parsed.caption) setCaption(parsed.caption);
+        if (Array.isArray(parsed.selectedPlatforms)) setSelectedPlatforms(parsed.selectedPlatforms);
+        sessionStorage.removeItem("vexel_studio_draft");
+      }
+
+      const justConnected = sessionStorage.getItem("vexel_just_connected");
+      if (justConnected) {
+        toast({
+          title: "Plataforma conectada!",
+          description: `Sua conta foi vinculada com sucesso ao Studio.`,
+        });
+        sessionStorage.removeItem("vexel_just_connected");
+      }
+    } catch {
+      // ignore JSON parse errors
+    }
+  }, [toast]);
+
+  // Cleanup object URLs on unmount
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
+
+  // Video metadata handler
+  const handleLoadedMetadata = () => {
+    if (videoRef.current) {
+      const duration = videoRef.current.duration;
+      const width = videoRef.current.videoWidth;
+      const height = videoRef.current.videoHeight;
+      setVideoDuration(duration);
+      setVideoDimensions({ width, height });
+      const landscape = width > height;
+      setIsLandscape(landscape);
+      if (landscape) {
+        toast({
+          title: "Aviso de Proporção",
+          description: "O vídeo enviado está em formato horizontal. Para Shorts e Reels, o formato vertical 9:16 é ideal.",
+        });
+      }
+    }
+  };
+
+  const handleSelectVideoFile = (selectedFile: File) => {
+    if (!selectedFile.type.startsWith("video/") && !selectedFile.name.match(/\.(mp4|mov|webm)$/i)) {
+      toast({
+        title: "Formato Inválido",
+        description: "Por favor, selecione um arquivo de vídeo (.mp4 ou .mov).",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+
+    const url = URL.createObjectURL(selectedFile);
+    setFile(selectedFile);
+    setPreviewUrl(url);
+    setIsPlaying(true);
+    setIsMuted(true);
+
+    // If title is empty, generate from filename
+    if (!title.trim()) {
+      const cleanName = selectedFile.name
+        .replace(/\.[^/.]+$/, "")
+        .replace(/[-_]/g, " ")
+        .slice(0, 100);
+      setTitle(cleanName);
+    }
+  };
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      handleSelectVideoFile(e.target.files[0]);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleSelectVideoFile(e.dataTransfer.files[0]);
+    }
+  };
+
+  const toggleVideoPlayback = () => {
+    if (videoRef.current) {
+      if (isPlaying) {
+        videoRef.current.pause();
+        setIsPlaying(false);
+      } else {
+        videoRef.current.play();
+        setIsPlaying(true);
+      }
+    }
+  };
+
+  const toggleVideoMute = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (videoRef.current) {
+      videoRef.current.muted = !isMuted;
+      setIsMuted(!isMuted);
+    }
+  };
+
+  const handleRemoveVideo = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+    setFile(null);
+    setPreviewUrl(null);
+    setVideoDuration(null);
+    setVideoDimensions(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const handleAddHashtag = (tag: string) => {
+    if (caption.includes(tag)) return;
+    setCaption((prev) => (prev ? `${prev.trim()} ${tag}` : tag));
+  };
+
+  const togglePlatform = (p: string) => {
+    setSelectedPlatforms((prev) =>
+      prev.includes(p) ? prev.filter((item) => item !== p) : [...prev, p]
+    );
+  };
+
+  const handleConnectPlatform = async (platformId: "youtube" | "instagram" | "tiktok") => {
+    if (!isSignedIn) {
+      // Save draft and open sign in
+      sessionStorage.setItem("vexel_studio_draft", JSON.stringify({ title, caption, selectedPlatforms }));
+      sessionStorage.setItem("vexel_oauth_return_to", "/studio");
+      if (openSignIn) {
+        openSignIn();
+      } else {
+        setLocation("/sign-in");
+      }
+      return;
+    }
+
+    try {
+      sessionStorage.setItem("vexel_studio_draft", JSON.stringify({ title, caption, selectedPlatforms }));
+      sessionStorage.setItem("vexel_oauth_return_to", "/studio");
+      const res = await connectPlatform.mutateAsync({ platform: platformId });
+      if (res.url) {
+        window.location.href = res.url;
+      }
+    } catch {
+      toast({
+        title: "Erro ao conectar",
+        description: "Não foi possível iniciar o login da plataforma.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Thumbnail generator helper
+  const captureVideoThumbnail = async (videoFile: File): Promise<Blob | null> => {
+    const objectUrl = URL.createObjectURL(videoFile);
+    try {
+      const video = document.createElement("video");
+      video.preload = "auto";
+      video.muted = true;
+      video.playsInline = true;
+      video.crossOrigin = "anonymous";
+      video.src = objectUrl;
+
+      await new Promise<void>((resolve, reject) => {
+        const timeout = window.setTimeout(() => reject(new Error("Timeout ao gerar miniatura")), 15000);
+        video.onloadedmetadata = () => {
+          window.clearTimeout(timeout);
+          resolve();
+        };
+        video.onerror = () => {
+          window.clearTimeout(timeout);
+          reject(new Error("Erro ao ler vídeo para miniatura"));
+        };
+      });
+
+      await new Promise<void>((resolve) => {
+        const timeout = window.setTimeout(resolve, 5000);
+        video.onseeked = () => {
+          window.clearTimeout(timeout);
+          resolve();
+        };
+        video.currentTime = 0.001;
+      });
+
+      const canvas = document.createElement("canvas");
+      canvas.width = video.videoWidth || 1080;
+      canvas.height = video.videoHeight || 1920;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return null;
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      return await new Promise<Blob | null>((res) => {
+        canvas.toBlob(res, "image/jpeg", 0.85);
+      });
+    } catch (e) {
+      console.warn("Falha ao gerar miniatura:", e);
+      return null;
+    } finally {
+      URL.revokeObjectURL(objectUrl);
+    }
+  };
+
+  // Execute publication
+  const handlePublish = async () => {
+    if (!file) {
+      toast({ title: "Vídeo obrigatório", description: "Por favor, arraste ou selecione um vídeo 9:16.", variant: "destructive" });
+      return;
+    }
+
+    if (!title.trim()) {
+      toast({ title: "Título obrigatório", description: "Digite um título para o vídeo.", variant: "destructive" });
+      return;
+    }
+
+    if (selectedPlatforms.length === 0) {
+      toast({ title: "Selecione as redes", description: "Escolha ao menos uma rede social para publicar.", variant: "destructive" });
+      return;
+    }
+
+    if (!isSignedIn) {
+      sessionStorage.setItem("vexel_studio_draft", JSON.stringify({ title, caption, selectedPlatforms }));
+      sessionStorage.setItem("vexel_oauth_return_to", "/studio");
+      if (openSignIn) {
+        openSignIn();
+      } else {
+        setLocation("/sign-in");
+      }
+      return;
+    }
+
+    // Check if selected platforms are connected
+    const unconnected = selectedPlatforms.filter((p) => {
+      const pl = platforms.find((item) => item.platform === p);
+      return !pl?.isConnected;
+    });
+
+    if (unconnected.length > 0) {
+      toast({
+        title: "Contas desconectadas",
+        description: `Conecte sua conta do ${unconnected.join(", ")} antes de publicar.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setIsPublishing(true);
+      setShowStatusModal(true);
+      setPublishStep("uploading");
+      setStatusMessage("Enviando vídeo para o Supabase Storage...");
+      setUploadProgress(10);
+
+      // 1. Request upload URL for video
+      const { uploadURL, objectPath } = await requestUploadUrl.mutateAsync({
+        data: {
+          name: file.name,
+          size: file.size,
+          contentType: file.type || "video/mp4",
+        },
+      });
+
+      // 2. Perform video binary upload with progress
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.upload.addEventListener("progress", (event) => {
+          if (event.lengthComputable) {
+            const percent = Math.round((event.loaded / event.total) * 75);
+            setUploadProgress(10 + percent);
+          }
+        });
+        xhr.addEventListener("load", () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve();
+          } else {
+            reject(new Error(`Falha no upload do vídeo (${xhr.status})`));
+          }
+        });
+        xhr.addEventListener("error", () => reject(new Error("Falha na conexão durante upload do vídeo")));
+        xhr.open("PUT", uploadURL);
+        xhr.setRequestHeader("Content-Type", file.type || "video/mp4");
+        xhr.send(file);
+      });
+
+      setUploadProgress(85);
+      setPublishStep("thumbnail");
+      setStatusMessage("Gerando capa e miniatura em alta resolução...");
+
+      // 3. Capture & upload thumbnail
+      let finalThumbnailUrl: string | null = null;
+      try {
+        const thumbBlob = await captureVideoThumbnail(file);
+        if (thumbBlob) {
+          const thumbUpload = await requestUploadUrl.mutateAsync({
+            data: {
+              name: `${file.name.replace(/\.[^/.]+$/, "")}-thumb.jpg`,
+              size: thumbBlob.size,
+              contentType: "image/jpeg",
+            },
+          });
+
+          await new Promise<void>((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.addEventListener("load", () => {
+              if (xhr.status >= 200 && xhr.status < 300) resolve();
+              else reject(new Error("Falha no upload da miniatura"));
+            });
+            xhr.addEventListener("error", () => reject(new Error("Erro de rede na miniatura")));
+            xhr.open("PUT", thumbUpload.uploadURL);
+            xhr.setRequestHeader("Content-Type", "image/jpeg");
+            xhr.send(thumbBlob);
+          });
+          finalThumbnailUrl = thumbUpload.publicURL;
+        }
+      } catch (err) {
+        console.warn("Miniatura opcional falhou:", err);
+      }
+
+      setUploadProgress(100);
+      setPublishStep("distributing");
+      setStatusMessage("Distribuindo simultaneamente para as redes selecionadas...");
+
+      // 4. Create post record
+      const created = await createPost.mutateAsync({
+        data: {
+          title: title.trim(),
+          caption: caption.trim() || title.trim(),
+          platforms: selectedPlatforms,
+          videoObjectPath: objectPath,
+          thumbnailUrl: finalThumbnailUrl,
+        },
+      });
+
+      setCurrentPostId(created.id);
+
+      // 5. Trigger publication
+      await publishPost.mutateAsync({ id: created.id });
+
+      // 6. Polling loop to get platform results
+      let pollCount = 0;
+      const pollInterval = window.setInterval(async () => {
+        pollCount++;
+        try {
+          const postData = await getPost(created.id);
+          if (postData.platformResults) {
+            setLivePlatformResults(postData.platformResults);
+          }
+
+          const isAllDone =
+            postData.status === "published" ||
+            postData.status === "failed" ||
+            (postData.platformResults &&
+              postData.platformResults.every(
+                (r) => r.status === "success" || r.status === "failed"
+              ));
+
+          if (isAllDone || pollCount > 60) {
+            window.clearInterval(pollInterval);
+            setPublishStep("done");
+            setIsPublishing(false);
+            setShowStatusModal(false);
+            setIsCelebrationOpen(true);
+          }
+        } catch {
+          // Keep polling
+        }
+      }, 1500);
+    } catch (err: any) {
+      console.error(err);
+      setIsPublishing(false);
+      setPublishStep("error");
+      setStatusMessage(err?.message || "Erro inesperado ao publicar.");
+      toast({
+        title: "Erro na publicação",
+        description: err?.message || "Ocorreu uma falha durante o processo.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleResetForNewPost = () => {
+    setIsCelebrationOpen(false);
+    setShowStatusModal(false);
+    setFile(null);
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(null);
+    setTitle("");
+    setCaption("");
+    setLivePlatformResults([]);
+    setCurrentPostId(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const formatDuration = (seconds: number | null) => {
+    if (!seconds) return "00:00";
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  return (
+    <div className="min-h-[100dvh] bg-background text-foreground flex flex-col selection:bg-primary/30">
+      {/* Sleek Minimalist Studio Header */}
+      <header className="h-16 border-b border-border/40 bg-background/80 backdrop-blur-md px-4 sm:px-8 flex items-center justify-between sticky top-0 z-40">
+        <div className="flex items-center gap-3">
+          <Link href="/studio" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
+            <img
+              src={`${basePath}/vexelhub-logo.png`}
+              alt="VexelHub"
+              className="h-7 w-auto max-w-[130px] object-contain"
+            />
+          </Link>
+          <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-xs font-semibold text-primary">
+            <Smartphone size={12} />
+            <span>Studio 9:16</span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          {isSignedIn ? (
+            <>
+              <Link href="/dashboard">
+                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-white flex items-center gap-1.5 text-xs sm:text-sm">
+                  <LayoutDashboard size={16} />
+                  <span className="hidden md:inline">Painel Completo</span>
+                </Button>
+              </Link>
+              <div className="flex items-center gap-2 pl-2 border-l border-border/50">
+                <div className="w-8 h-8 rounded-full overflow-hidden bg-primary/20 border border-border">
+                  {user?.imageUrl ? (
+                    <img src={user.imageUrl} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-xs font-bold text-primary">
+                      {user?.firstName?.charAt(0) || "U"}
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={() => signOut({ redirectUrl: basePath || "/" })}
+                  className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                  title="Sair"
+                >
+                  <LogOut size={16} />
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  sessionStorage.setItem("vexel_studio_draft", JSON.stringify({ title, caption, selectedPlatforms }));
+                  if (openSignIn) openSignIn();
+                  else setLocation("/sign-in");
+                }}
+                className="text-xs sm:text-sm border-border hover:bg-white/5"
+              >
+                Entrar
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => {
+                  sessionStorage.setItem("vexel_studio_draft", JSON.stringify({ title, caption, selectedPlatforms }));
+                  if (openSignIn) openSignIn();
+                  else setLocation("/sign-in");
+                }}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs sm:text-sm"
+              >
+                1º Post Grátis
+              </Button>
+            </div>
+          )}
+        </div>
+      </header>
+
+      {/* Main Studio Arena */}
+      <main className="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 lg:p-8 flex flex-col justify-center">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          
+          {/* LEFT COLUMN: The 9:16 Smartphone Mockup Preview */}
+          <div className="lg:col-span-5 flex flex-col items-center">
+            {/* Phone Device Bezel */}
+            <div className="relative w-full max-w-[310px] sm:max-w-[330px] aspect-[9/16] rounded-[42px] p-3 bg-zinc-950/90 border border-white/10 shadow-[0_0_50px_rgba(124,58,237,0.18)] ring-1 ring-white/5 backdrop-blur-2xl flex flex-col transition-all">
+              
+              {/* Speaker & Dynamic Notch */}
+              <div className="w-full flex justify-center pb-2 pt-1 select-none pointer-events-none">
+                <div className="w-24 h-4 rounded-full bg-zinc-900 border border-white/5 flex items-center justify-center gap-1.5">
+                  <div className="w-2 h-2 rounded-full bg-zinc-800" />
+                  <div className="w-8 h-1 rounded-full bg-zinc-800/80" />
+                </div>
+              </div>
+
+              {/* Screen Area */}
+              <div 
+                className={`relative flex-1 w-full rounded-[30px] overflow-hidden bg-zinc-900/90 flex flex-col items-center justify-center transition-all ${
+                  !file ? (isDragging ? 'border-2 border-primary bg-primary/10' : 'border border-dashed border-white/15 hover:border-primary/50 cursor-pointer') : 'border border-white/10'
+                }`}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onClick={() => !file && fileInputRef.current?.click()}
+              >
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileInputChange}
+                  accept="video/mp4,video/quicktime,video/webm"
+                  className="hidden"
+                />
+
+                {file && previewUrl ? (
+                  // Video Playing State
+                  <div className="relative w-full h-full group" onClick={toggleVideoPlayback}>
+                    <video
+                      ref={videoRef}
+                      src={previewUrl}
+                      loop
+                      autoPlay
+                      muted={isMuted}
+                      playsInline
+                      onLoadedMetadata={handleLoadedMetadata}
+                      className="w-full h-full object-cover"
+                    />
+
+                    {/* Top Overlay Badges */}
+                    <div className="absolute top-3 inset-x-3 flex items-center justify-between z-20 pointer-events-auto">
+                      <Badge className="bg-black/60 backdrop-blur-md border border-white/10 text-white font-mono text-[11px] px-2 py-0.5">
+                        9:16 • {formatDuration(videoDuration)}
+                      </Badge>
+                      <button
+                        onClick={handleRemoveVideo}
+                        className="w-7 h-7 rounded-full bg-black/60 hover:bg-destructive text-white/80 hover:text-white flex items-center justify-center backdrop-blur-md border border-white/10 transition-colors"
+                        title="Remover vídeo"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+
+                    {/* Bottom Controls */}
+                    <div className="absolute bottom-3 inset-x-3 flex items-center justify-between z-20 pointer-events-auto">
+                      <button
+                        onClick={toggleVideoMute}
+                        className="w-8 h-8 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center backdrop-blur-md border border-white/10 transition-colors"
+                        title={isMuted ? "Ativar som" : "Desativar som"}
+                      >
+                        {isMuted ? <VolumeX size={15} /> : <Volume2 size={15} />}
+                      </button>
+
+                      <Badge className="bg-black/60 backdrop-blur-md border border-white/10 text-muted-foreground font-mono text-[11px]">
+                        {(file.size / (1024 * 1024)).toFixed(1)} MB
+                      </Badge>
+                    </div>
+
+                    {/* Play/Pause Overlay indicator */}
+                    {!isPlaying && (
+                      <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center pointer-events-none z-10">
+                        <div className="w-14 h-14 rounded-full bg-primary/80 text-white flex items-center justify-center shadow-lg">
+                          <Play size={24} className="ml-1" />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  // Empty State - Drag & Drop Target
+                  <div className="p-6 text-center flex flex-col items-center justify-center">
+                    <div className="w-16 h-16 rounded-full bg-primary/10 border border-primary/30 text-primary flex items-center justify-center mb-4 shadow-[0_0_20px_rgba(124,58,237,0.25)] group-hover:scale-105 transition-transform">
+                      <Plus size={32} />
+                    </div>
+                    <p className="font-bold text-white text-base mb-1">
+                      Arraste o vídeo (9:16)
+                    </p>
+                    <p className="text-xs text-muted-foreground mb-4">
+                      ou clique para selecionar do dispositivo
+                    </p>
+                    <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[11px] text-zinc-400">
+                      <span>MP4 • MOV • WebM</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Bottom Phone Indicator Bar */}
+              <div className="w-full flex justify-center pt-2 pb-0.5 select-none pointer-events-none">
+                <div className="w-28 h-1 rounded-full bg-white/20" />
+              </div>
+            </div>
+
+            {/* Quick Helper below Phone */}
+            <p className="text-xs text-muted-foreground mt-3 text-center flex items-center gap-1.5">
+              <Zap size={13} className="text-primary" />
+              <span>O corte será publicado em proporção vertical para Shorts, Reels e TikTok.</span>
+            </p>
+          </div>
+
+          {/* RIGHT COLUMN: The Ultra-Focused Publisher Cockpit */}
+          <div className="lg:col-span-7 flex flex-col gap-6">
+            
+            <div className="space-y-1">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-semibold mb-2">
+                <Sparkles size={13} />
+                <span>O "Anti-Metricool" — Sem Distrações</span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
+                Publicação Instantânea em 1 Clique
+              </h1>
+              <p className="text-muted-foreground text-sm">
+                Envie uma vez e veja seu corte cair simultaneamente no YouTube Shorts, Instagram Reels e TikTok.
+              </p>
+            </div>
+
+            {/* Field: Title */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-semibold text-white flex items-center gap-1.5">
+                  Título do Vídeo <span className="text-primary">*</span>
+                </label>
+                <span className={`text-xs font-mono ${title.length > 90 ? 'text-destructive font-bold' : 'text-muted-foreground'}`}>
+                  {title.length}/100
+                </span>
+              </div>
+              <Input
+                value={title}
+                onChange={(e) => setTitle(e.target.value.slice(0, 100))}
+                placeholder="Ex: Como dobrei minhas visualizações em 7 dias 🚀"
+                className="bg-card border-border/60 focus:border-primary text-white h-12 text-base rounded-xl px-4"
+              />
+            </div>
+
+            {/* Field: Caption & Hashtags */}
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-white flex items-center justify-between">
+                <span>Legenda e Descrição (opcional)</span>
+                <span className="text-xs text-muted-foreground font-normal">Replicada para todas as redes</span>
+              </label>
+              <Textarea
+                value={caption}
+                onChange={(e) => setCaption(e.target.value)}
+                placeholder="Escreva a legenda para o Reels, TikTok e descrição do Shorts..."
+                rows={3}
+                className="bg-card border-border/60 focus:border-primary text-white text-sm rounded-xl resize-none p-3.5"
+              />
+              {/* Quick Hashtag helper chips */}
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                <span className="text-[11px] text-muted-foreground mr-1">Tags rápidas:</span>
+                {QUICK_HASHTAGS.map((tag) => (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => handleAddHashtag(tag)}
+                    className="text-[11px] px-2 py-0.5 rounded-md bg-muted/40 hover:bg-primary/20 hover:text-primary text-muted-foreground border border-border/40 transition-colors"
+                  >
+                    +{tag}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Field: Trio de Ouro Platform Selectors */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-semibold text-white">
+                  Publicar em: <span className="text-xs font-normal text-muted-foreground">(O Trio de Ouro)</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (selectedPlatforms.length === 3) setSelectedPlatforms([]);
+                    else setSelectedPlatforms(["youtube", "instagram", "tiktok"]);
+                  }}
+                  className="text-xs text-primary hover:underline font-medium"
+                >
+                  {selectedPlatforms.length === 3 ? "Desmarcar todas" : "Selecionar todas"}
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* 1. YouTube Shorts */}
+                {(() => {
+                  const yt = platforms.find((p) => p.platform === "youtube");
+                  const isConnected = yt?.isConnected;
+                  const isSelected = selectedPlatforms.includes("youtube");
+
+                  return (
+                    <div
+                      onClick={() => isConnected && togglePlatform("youtube")}
+                      className={`relative p-3.5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between ${
+                        isSelected && isConnected
+                          ? "bg-primary/10 border-primary/50 shadow-[0_0_15px_rgba(124,58,237,0.15)]"
+                          : isConnected
+                          ? "bg-card border-border/50 hover:border-border"
+                          : "bg-muted/10 border-border/30 opacity-80"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="w-9 h-9 rounded-xl bg-[#FF0000]/15 flex items-center justify-center text-[#FF0000]">
+                          <SiYoutube size={20} />
+                        </div>
+                        {isConnected ? (
+                          <div
+                            className={`w-5 h-5 rounded-md border flex items-center justify-center transition-colors ${
+                              isSelected ? "bg-primary border-primary text-white" : "border-border bg-card"
+                            }`}
+                          >
+                            {isSelected && <Check size={12} strokeWidth={3} />}
+                          </div>
+                        ) : null}
+                      </div>
+
+                      <div>
+                        <p className="font-bold text-white text-sm">YouTube Shorts</p>
+                        {isConnected ? (
+                          <p className="text-[11px] text-green-400 font-medium truncate flex items-center gap-1 mt-0.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
+                            {yt?.accountName || "Conectado"}
+                          </p>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleConnectPlatform("youtube");
+                            }}
+                            className="text-[11px] text-primary hover:underline font-semibold mt-1 flex items-center gap-1"
+                          >
+                            Conectar canal ➔
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* 2. Instagram Reels */}
+                {(() => {
+                  const ig = platforms.find((p) => p.platform === "instagram");
+                  const isConnected = ig?.isConnected;
+                  const isSelected = selectedPlatforms.includes("instagram");
+
+                  return (
+                    <div
+                      onClick={() => isConnected && togglePlatform("instagram")}
+                      className={`relative p-3.5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between ${
+                        isSelected && isConnected
+                          ? "bg-primary/10 border-primary/50 shadow-[0_0_15px_rgba(124,58,237,0.15)]"
+                          : isConnected
+                          ? "bg-card border-border/50 hover:border-border"
+                          : "bg-muted/10 border-border/30 opacity-80"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="w-9 h-9 rounded-xl bg-[#E1306C]/15 flex items-center justify-center text-[#E1306C]">
+                          <SiInstagram size={19} />
+                        </div>
+                        {isConnected ? (
+                          <div
+                            className={`w-5 h-5 rounded-md border flex items-center justify-center transition-colors ${
+                              isSelected ? "bg-primary border-primary text-white" : "border-border bg-card"
+                            }`}
+                          >
+                            {isSelected && <Check size={12} strokeWidth={3} />}
+                          </div>
+                        ) : null}
+                      </div>
+
+                      <div>
+                        <p className="font-bold text-white text-sm">Instagram Reels</p>
+                        {isConnected ? (
+                          <p className="text-[11px] text-green-400 font-medium truncate flex items-center gap-1 mt-0.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
+                            {ig?.accountName ? `@${ig.accountName}` : "Conectado"}
+                          </p>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleConnectPlatform("instagram");
+                            }}
+                            className="text-[11px] text-primary hover:underline font-semibold mt-1 flex items-center gap-1"
+                          >
+                            Conectar conta ➔
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* 3. TikTok */}
+                {(() => {
+                  const tt = platforms.find((p) => p.platform === "tiktok");
+                  const isConnected = tt?.isConnected;
+                  const isSelected = selectedPlatforms.includes("tiktok");
+
+                  return (
+                    <div
+                      onClick={() => isConnected && togglePlatform("tiktok")}
+                      className={`relative p-3.5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between ${
+                        isSelected && isConnected
+                          ? "bg-primary/10 border-primary/50 shadow-[0_0_15px_rgba(124,58,237,0.15)]"
+                          : isConnected
+                          ? "bg-card border-border/50 hover:border-border"
+                          : "bg-muted/10 border-border/30 opacity-80"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center text-white">
+                          <SiTiktok size={18} />
+                        </div>
+                        {isConnected ? (
+                          <div
+                            className={`w-5 h-5 rounded-md border flex items-center justify-center transition-colors ${
+                              isSelected ? "bg-primary border-primary text-white" : "border-border bg-card"
+                            }`}
+                          >
+                            {isSelected && <Check size={12} strokeWidth={3} />}
+                          </div>
+                        ) : null}
+                      </div>
+
+                      <div>
+                        <p className="font-bold text-white text-sm">TikTok</p>
+                        {isConnected ? (
+                          <p className="text-[11px] text-green-400 font-medium truncate flex items-center gap-1 mt-0.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
+                            {tt?.accountName || "Conectado"}
+                          </p>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleConnectPlatform("tiktok");
+                            }}
+                            className="text-[11px] text-primary hover:underline font-semibold mt-1 flex items-center gap-1"
+                          >
+                            Conectar conta ➔
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+
+            {/* Action CTA: PUBLICAR AGORA */}
+            <div className="pt-2">
+              <Button
+                type="button"
+                onClick={handlePublish}
+                disabled={isPublishing}
+                className="w-full h-15 py-6 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black text-lg shadow-[0_0_30px_rgba(124,58,237,0.4)] border border-white/20 transition-all hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-3"
+              >
+                {isPublishing ? (
+                  <>
+                    <Loader2 className="animate-spin" size={22} />
+                    <span>Publicando seu corte...</span>
+                  </>
+                ) : !isSignedIn ? (
+                  <>
+                    <Sparkles size={20} />
+                    <span>Entrar e Publicar (1º Post 100% Grátis) 🚀</span>
+                  </>
+                ) : (
+                  <>
+                    <Zap size={22} className="fill-current" />
+                    <span>PUBLICAR AGORA 🚀</span>
+                  </>
+                )}
+              </Button>
+
+              {/* Status Hint below button */}
+              <div className="flex items-center justify-between text-xs text-muted-foreground mt-2 px-1">
+                <span>⚡ Publicação direta e sem espera</span>
+                <Link href="/publish" className="hover:text-primary transition-colors">
+                  Modo avançado (com agendamento) →
+                </Link>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </main>
+
+      {/* Progress & Live Publishing Modal */}
+      <Dialog open={showStatusModal} onOpenChange={(open) => !isPublishing && setShowStatusModal(open)}>
+        <DialogContent className="sm:max-w-md bg-card border-border/80 text-foreground p-6 rounded-3xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-white flex items-center gap-2">
+              <Loader2 className="animate-spin text-primary" size={20} />
+              Publicando nas Redes
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground text-sm">
+              Distribuindo seu vídeo 9:16 diretamente aos servidores oficiais.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 py-4">
+            {/* Progress bar */}
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs font-medium">
+                <span className="text-zinc-300">{statusMessage}</span>
+                <span className="text-primary font-mono">{uploadProgress}%</span>
+              </div>
+              <Progress value={uploadProgress} className="h-2 bg-muted/30" />
+            </div>
+
+            {/* Platform status cards */}
+            <div className="space-y-2">
+              {selectedPlatforms.map((plat) => {
+                const result = livePlatformResults.find((r) => r.platform === plat);
+                const isPending = !result || result.status === "pending";
+                const isSuccess = result?.status === "success";
+                const isFailed = result?.status === "failed";
+
+                return (
+                  <div
+                    key={plat}
+                    className="flex items-center justify-between p-3 rounded-xl bg-muted/20 border border-border/40"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      {plat === "youtube" && <SiYoutube className="text-[#FF0000]" size={18} />}
+                      {plat === "instagram" && <SiInstagram className="text-[#E1306C]" size={18} />}
+                      {plat === "tiktok" && <SiTiktok className="text-white" size={16} />}
+                      <span className="text-sm font-semibold capitalize text-white">
+                        {plat === "youtube" ? "YouTube Shorts" : plat === "instagram" ? "Instagram Reels" : "TikTok"}
+                      </span>
+                    </div>
+
+                    <div>
+                      {isSuccess ? (
+                        <span className="text-xs font-semibold text-green-400 flex items-center gap-1">
+                          <CheckCircle2 size={14} /> Publicado!
+                        </span>
+                      ) : isFailed ? (
+                        <span className="text-xs font-semibold text-destructive flex items-center gap-1">
+                          <AlertCircle size={14} /> Falhou
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Loader2 size={12} className="animate-spin text-primary" />
+                          {result?.stage || (publishStep === "uploading" ? "Aguardando envio..." : "Processando...")}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Celebration & R$ 14,90/mês Monetization Modal */}
+      <Dialog open={isCelebrationOpen} onOpenChange={setIsCelebrationOpen}>
+        <DialogContent className="sm:max-w-lg bg-zinc-950 border border-white/10 text-foreground p-6 sm:p-8 rounded-[32px] shadow-2xl">
+          <div className="text-center space-y-4">
+            
+            {/* Celebration Icon */}
+            <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-purple-600 to-indigo-500 text-white flex items-center justify-center mx-auto shadow-[0_0_35px_rgba(124,58,237,0.5)]">
+              <Sparkles size={32} />
+            </div>
+
+            <div>
+              <h2 className="text-2xl sm:text-3xl font-black text-white">
+                🎉 Publicado com Sucesso!
+              </h2>
+              <p className="text-muted-foreground text-sm mt-1">
+                Seu vídeo está sendo exibido para os seus seguidores e novos espectadores.
+              </p>
+            </div>
+
+            {/* Direct Links to Published Posts */}
+            <div className="space-y-2 text-left bg-zinc-900/80 p-3.5 rounded-2xl border border-white/5">
+              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
+                Acesse seus posts:
+              </p>
+              {livePlatformResults.map((r) => (
+                <div key={r.platform} className="flex items-center justify-between text-xs py-1">
+                  <div className="flex items-center gap-2">
+                    {r.platform === "youtube" && <SiYoutube className="text-[#FF0000]" size={14} />}
+                    {r.platform === "instagram" && <SiInstagram className="text-[#E1306C]" size={14} />}
+                    {r.platform === "tiktok" && <SiTiktok className="text-white" size={13} />}
+                    <span className="capitalize font-medium text-white">{r.platform}</span>
+                  </div>
+                  {r.postUrl ? (
+                    <a
+                      href={r.postUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-primary hover:underline flex items-center gap-1 font-semibold"
+                    >
+                      Ver post ↗
+                    </a>
+                  ) : r.status === "success" ? (
+                    <span className="text-green-400 font-medium">Publicado ✓</span>
+                  ) : (
+                    <span className="text-destructive font-medium">Erro ao publicar</span>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Free First Post Banner */}
+            <div className="p-3 rounded-xl bg-primary/10 border border-primary/20 text-xs text-primary font-medium flex items-center justify-center gap-2">
+              <Crown size={15} />
+              <span>Seu 1º post no VexelHub foi 100% gratuito!</span>
+            </div>
+
+            {/* Monetization Pricing Card: R$ 14,90/mês */}
+            <div className="p-5 rounded-2xl bg-gradient-to-b from-zinc-900 to-zinc-950 border border-primary/40 relative overflow-hidden text-left shadow-lg">
+              <div className="absolute top-2 right-2">
+                <Badge className="bg-primary text-white text-[10px] uppercase font-bold">Oferta de Lançamento</Badge>
+              </div>
+
+              <p className="text-xs font-bold text-primary uppercase tracking-wider">Plano Criador Ilimitado</p>
+              <div className="flex items-baseline gap-1 my-1">
+                <span className="text-3xl font-black text-white">R$ 14,90</span>
+                <span className="text-xs text-muted-foreground">/ mês</span>
+              </div>
+              <p className="text-xs text-zinc-300 mb-3">
+                Publique cortes ilimitados com 1 clique no Shorts, Reels e TikTok sem complicação.
+              </p>
+
+              <ul className="space-y-1.5 text-xs text-zinc-400 mb-4">
+                <li className="flex items-center gap-2">
+                  <Check size={14} className="text-green-400" /> Publicações simultâneas ilimitadas
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check size={14} className="text-green-400" /> Economize até 25h de trabalho por mês
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check size={14} className="text-green-400" /> Cancele quando quiser, sem fidelidade
+                </li>
+              </ul>
+
+              <Button
+                onClick={() => {
+                  toast({
+                    title: "Em breve!",
+                    description: "O checkout Stripe com a assinatura de R$ 14,90/mês estará disponível nas próximas atualizações.",
+                  });
+                }}
+                className="w-full bg-primary hover:bg-primary/90 text-white font-bold text-sm h-11 rounded-xl shadow-[0_0_20px_rgba(124,58,237,0.3)]"
+              >
+                Garantir Assinatura por R$ 14,90
+              </Button>
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex items-center gap-3 pt-2">
+              <Button
+                variant="outline"
+                onClick={handleResetForNewPost}
+                className="flex-1 border-white/10 hover:bg-white/5 text-white rounded-xl h-11"
+              >
+                Publicar Outro Vídeo
+              </Button>
+              <Link href="/posts" className="flex-1">
+                <Button
+                  variant="ghost"
+                  className="w-full text-muted-foreground hover:text-white rounded-xl h-11"
+                >
+                  Ver Histórico
+                </Button>
+              </Link>
+            </div>
+
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
