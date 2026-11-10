@@ -31,7 +31,9 @@ import {
   LayoutDashboard, 
   LogOut,
   Smartphone,
-  Info
+  Info,
+  Calendar as CalendarIcon,
+  Clock
 } from "lucide-react";
 import { SiYoutube, SiInstagram, SiTiktok } from "react-icons/si";
 import { Button } from "@/components/ui/button";
@@ -69,6 +71,13 @@ export default function Studio() {
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
+  const [fitMode, setFitMode] = useState<"contain" | "cover">("cover");
+
+  // Scheduling State
+  const [isSchedulingOpen, setIsSchedulingOpen] = useState(false);
+  const [scheduledDate, setScheduledDate] = useState("");
+  const [scheduledTime, setScheduledTime] = useState("");
+  const [isScheduledSuccess, setIsScheduledSuccess] = useState(false);
 
   // Publishing Workflow State
   const [isPublishing, setIsPublishing] = useState(false);
@@ -132,10 +141,13 @@ export default function Studio() {
       const landscape = width > height;
       setIsLandscape(landscape);
       if (landscape) {
+        setFitMode("contain"); // Exibe centralizado com tarjas pretas (letterboxing)
         toast({
-          title: "Aviso de Proporção",
-          description: "O vídeo enviado está em formato horizontal. Para Shorts e Reels, o formato vertical 9:16 é ideal.",
+          title: "Vídeo Horizontal Detectado (16:9)",
+          description: "Exibindo com tarjas pretas (letterbox), exatamente como aparecerá no Reels e Shorts.",
         });
+      } else {
+        setFitMode("cover");
       }
     }
   };
@@ -318,10 +330,10 @@ export default function Studio() {
     }
   };
 
-  // Execute publication
-  const handlePublish = async () => {
+  // Execute publication or scheduling
+  const handlePublish = async (mode: "now" | "schedule" = "now") => {
     if (!file) {
-      toast({ title: "Vídeo obrigatório", description: "Por favor, arraste ou selecione um vídeo 9:16.", variant: "destructive" });
+      toast({ title: "Vídeo obrigatório", description: "Por favor, arraste ou selecione um vídeo.", variant: "destructive" });
       return;
     }
 
@@ -332,6 +344,11 @@ export default function Studio() {
 
     if (selectedPlatforms.length === 0) {
       toast({ title: "Selecione as redes", description: "Escolha ao menos uma rede social para publicar.", variant: "destructive" });
+      return;
+    }
+
+    if (mode === "schedule" && (!scheduledDate || !scheduledTime)) {
+      toast({ title: "Data e hora obrigatórias", description: "Escolha a data e o horário para agendar o post.", variant: "destructive" });
       return;
     }
 
@@ -355,7 +372,7 @@ export default function Studio() {
     if (unconnected.length > 0) {
       toast({
         title: "Contas desconectadas",
-        description: `Conecte sua conta do ${unconnected.join(", ")} antes de publicar.`,
+        description: `Conecte sua conta do ${unconnected.join(", ")} antes de continuar.`,
         variant: "destructive",
       });
       return;
@@ -434,10 +451,35 @@ export default function Studio() {
       }
 
       setUploadProgress(100);
+
+      // 4. Se for agendamento, salva no banco e encerra com sucesso
+      if (mode === "schedule") {
+        const scheduledAtISO = new Date(`${scheduledDate}T${scheduledTime}:00`).toISOString();
+        await createPost.mutateAsync({
+          data: {
+            title: title.trim(),
+            caption: caption.trim() || title.trim(),
+            platforms: selectedPlatforms,
+            videoObjectPath: objectPath,
+            thumbnailUrl: finalThumbnailUrl,
+            scheduledAt: scheduledAtISO,
+          },
+        });
+
+        setIsPublishing(false);
+        setShowStatusModal(false);
+        setIsScheduledSuccess(true);
+        toast({
+          title: "Post agendado com sucesso!",
+          description: `Seu post foi salvo para ${scheduledDate.split("-").reverse().slice(0, 2).join("/")} às ${scheduledTime}.`,
+        });
+        return;
+      }
+
+      // 5. Se for publicação imediata
       setPublishStep("distributing");
       setStatusMessage("Distribuindo simultaneamente para as redes selecionadas...");
 
-      // 4. Create post record
       const created = await createPost.mutateAsync({
         data: {
           title: title.trim(),
@@ -449,8 +491,6 @@ export default function Studio() {
       });
 
       setCurrentPostId(created.id);
-
-      // 5. Trigger publication
       await publishPost.mutateAsync({ id: created.id });
 
       // 6. Polling loop to get platform results
@@ -628,7 +668,7 @@ export default function Studio() {
 
                 {file && previewUrl ? (
                   // Video Playing State
-                  <div className="relative w-full h-full group" onClick={toggleVideoPlayback}>
+                  <div className="relative w-full h-full group bg-black flex items-center justify-center overflow-hidden rounded-[28px]" onClick={toggleVideoPlayback}>
                     <video
                       ref={videoRef}
                       src={previewUrl}
@@ -637,14 +677,31 @@ export default function Studio() {
                       muted={isMuted}
                       playsInline
                       onLoadedMetadata={handleLoadedMetadata}
-                      className="w-full h-full object-cover"
+                      className={`w-full h-full transition-all duration-300 ${
+                        fitMode === "contain" ? "object-contain bg-black" : "object-cover"
+                      }`}
                     />
 
                     {/* Top Overlay Badges */}
                     <div className="absolute top-3 inset-x-3 flex items-center justify-between z-20 pointer-events-auto">
-                      <Badge className="bg-black/60 backdrop-blur-md border border-white/10 text-white font-mono text-[11px] px-2 py-0.5">
-                        9:16 • {formatDuration(videoDuration)}
-                      </Badge>
+                      <div className="flex items-center gap-1.5">
+                        <Badge className="bg-black/75 backdrop-blur-md border border-white/10 text-white font-mono text-[11px] px-2 py-0.5">
+                          {isLandscape ? "16:9" : "9:16"} • {formatDuration(videoDuration)}
+                        </Badge>
+                        {isLandscape && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setFitMode((prev) => (prev === "contain" ? "cover" : "contain"));
+                            }}
+                            className="px-2 py-0.5 rounded-full bg-black/75 hover:bg-black/90 backdrop-blur-md border border-white/15 text-[10px] text-white/90 hover:text-white flex items-center gap-1 transition-all"
+                            title="Alternar entre modo com tarjas pretas ou tela cheia"
+                          >
+                            {fitMode === "contain" ? "↕ Com Tarjas" : "⤢ Preencher"}
+                          </button>
+                        )}
+                      </div>
                       <button
                         onClick={handleRemoveVideo}
                         className="w-7 h-7 rounded-full bg-black/60 hover:bg-destructive text-white/80 hover:text-white flex items-center justify-center backdrop-blur-md border border-white/10 transition-colors"
@@ -685,7 +742,7 @@ export default function Studio() {
                       <Plus size={32} />
                     </div>
                     <p className="font-bold text-white text-base mb-1">
-                      Arraste o vídeo (9:16)
+                      Arraste o vídeo (9:16 ou 16:9)
                     </p>
                     <p className="text-xs text-muted-foreground mb-4">
                       ou clique para selecionar do dispositivo
@@ -704,10 +761,17 @@ export default function Studio() {
             </div>
 
             {/* Quick Helper below Phone */}
-            <p className="text-xs text-muted-foreground mt-3 text-center flex items-center gap-1.5">
-              <Zap size={13} className="text-primary" />
-              <span>O corte será publicado em proporção vertical para Shorts, Reels e TikTok.</span>
-            </p>
+            {isLandscape ? (
+              <p className="text-xs text-amber-400/90 mt-3 text-center flex items-center justify-center gap-1.5 bg-amber-500/10 py-1.5 px-3 rounded-full border border-amber-500/20 max-w-[330px]">
+                <Info size={13} className="shrink-0" />
+                <span>Vídeo horizontal: exibido com tarjas pretas (letterbox) no Shorts e Reels.</span>
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground mt-3 text-center flex items-center gap-1.5">
+                <Zap size={13} className="text-primary" />
+                <span>Vídeo vertical 9:16: preenchimento total nativo para mobile.</span>
+              </p>
+            )}
           </div>
 
           {/* RIGHT COLUMN: The Ultra-Focused Publisher Cockpit */}
@@ -988,11 +1052,102 @@ export default function Studio() {
                 )}
               </Button>
 
+              {/* Opção de Agendamento Simples */}
+              <div className="pt-3 space-y-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsSchedulingOpen(!isSchedulingOpen)}
+                  className="w-full h-11 border-border/70 hover:bg-white/5 text-muted-foreground hover:text-white flex items-center justify-center gap-2 rounded-xl text-xs sm:text-sm font-medium transition-colors"
+                >
+                  <CalendarIcon size={15} className="text-primary" />
+                  <span>{isSchedulingOpen ? "Fechar Opções de Agendamento" : "Ou Agendar para Mais Tarde"}</span>
+                </Button>
+
+                {isSchedulingOpen && (
+                  <div className="p-4 rounded-2xl bg-card border border-primary/30 space-y-3.5 shadow-lg animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-white flex items-center gap-1.5">
+                        <Clock size={14} className="text-primary" /> Escolha quando publicar:
+                      </span>
+                      <span className="text-[11px] text-muted-foreground">Fuso horário local</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      <div>
+                        <label className="text-[11px] font-medium text-zinc-300 block mb-1">Data:</label>
+                        <Input
+                          type="date"
+                          value={scheduledDate}
+                          min={new Date().toISOString().split("T")[0]}
+                          onChange={(e) => setScheduledDate(e.target.value)}
+                          className="bg-background border-border focus:border-primary text-white text-xs h-10 rounded-lg"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[11px] font-medium text-zinc-300 block mb-1">Horário:</label>
+                        <Input
+                          type="time"
+                          value={scheduledTime}
+                          onChange={(e) => setScheduledTime(e.target.value)}
+                          className="bg-background border-border focus:border-primary text-white text-xs h-10 rounded-lg"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Presets de Horários de Pico */}
+                    <div className="space-y-1.5 pt-1">
+                      <span className="text-[11px] text-muted-foreground block">Horários com maior engajamento:</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {[
+                          { label: "Hoje 18:00", dateOffset: 0, time: "18:00" },
+                          { label: "Hoje 20:30", dateOffset: 0, time: "20:30" },
+                          { label: "Amanhã 12:00", dateOffset: 1, time: "12:00" },
+                          { label: "Amanhã 19:00", dateOffset: 1, time: "19:00" },
+                        ].map((preset) => (
+                          <button
+                            key={preset.label}
+                            type="button"
+                            onClick={() => {
+                              const target = new Date();
+                              target.setDate(target.getDate() + preset.dateOffset);
+                              setScheduledDate(target.toISOString().split("T")[0]);
+                              setScheduledTime(preset.time);
+                            }}
+                            className="text-[11px] px-2.5 py-1 rounded-md bg-muted/40 hover:bg-primary/20 hover:text-primary text-muted-foreground border border-border/40 transition-colors"
+                          >
+                            {preset.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <Button
+                      type="button"
+                      onClick={() => handlePublish("schedule")}
+                      disabled={isPublishing || !scheduledDate || !scheduledTime}
+                      className="w-full bg-primary/20 hover:bg-primary/30 text-primary hover:text-white border border-primary/40 font-bold text-xs sm:text-sm h-11 rounded-xl transition-all"
+                    >
+                      {isPublishing ? (
+                        <>
+                          <Loader2 className="animate-spin mr-2" size={16} />
+                          <span>Agendando...</span>
+                        </>
+                      ) : (
+                        <span>
+                          Confirmar Agendamento {scheduledDate ? `para ${scheduledDate.split("-").reverse().slice(0, 2).join("/")}` : ""} {scheduledTime ? `às ${scheduledTime}` : ""}
+                        </span>
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </div>
+
               {/* Status Hint below button */}
               <div className="flex items-center justify-between text-xs text-muted-foreground mt-2 px-1">
-                <span>⚡ Publicação direta e sem espera</span>
-                <Link href="/publish" className="hover:text-primary transition-colors">
-                  Modo avançado (com agendamento) →
+                <span>⚡ Sem complicação, direto nas suas redes</span>
+                <Link href="/posts" className="hover:text-primary transition-colors">
+                  Ver histórico de publicações →
                 </Link>
               </div>
             </div>
@@ -1185,6 +1340,53 @@ export default function Studio() {
               </Link>
             </div>
 
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Confirmação de Agendamento */}
+      <Dialog open={isScheduledSuccess} onOpenChange={setIsScheduledSuccess}>
+        <DialogContent className="sm:max-w-md bg-zinc-950 border border-white/10 text-foreground p-6 rounded-[28px] shadow-2xl text-center">
+          <div className="w-14 h-14 rounded-full bg-primary/20 text-primary flex items-center justify-center mx-auto mb-3 border border-primary/30 shadow-[0_0_25px_rgba(124,58,237,0.4)]">
+            <CalendarIcon size={28} />
+          </div>
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-white text-center">
+              📅 Post Agendado com Sucesso!
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground text-sm text-center">
+              Seu corte foi programado e está salvo para envio nas plataformas escolhidas.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="p-4 rounded-xl bg-muted/20 border border-border/50 text-left space-y-2 my-3 text-xs">
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Data e Horário:</span>
+              <span className="font-semibold text-white">
+                {scheduledDate ? scheduledDate.split("-").reverse().join("/") : ""} às {scheduledTime}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Plataformas:</span>
+              <span className="font-semibold text-primary capitalize">{selectedPlatforms.join(", ")}</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 pt-2">
+            <Button
+              variant="outline"
+              onClick={handleResetForNewPost}
+              className="flex-1 border-white/10 hover:bg-white/5 text-white rounded-xl h-10 text-xs"
+            >
+              Criar Outro Post
+            </Button>
+            <Link href="/calendar" className="flex-1">
+              <Button
+                className="w-full bg-primary hover:bg-primary/90 text-white rounded-xl h-10 text-xs font-semibold"
+              >
+                Ver no Calendário
+              </Button>
+            </Link>
           </div>
         </DialogContent>
       </Dialog>
