@@ -35,7 +35,17 @@ import {
   Calendar as CalendarIcon,
   Clock,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Heart,
+  ThumbsUp,
+  ThumbsDown,
+  MessageCircle,
+  Share2,
+  Bookmark,
+  Music,
+  MoreVertical,
+  Search,
+  Send
 } from "lucide-react";
 import { 
   format, 
@@ -73,6 +83,11 @@ export default function Studio() {
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const scheduleSectionRef = useRef<HTMLDivElement>(null);
+  const timeInputRef = useRef<HTMLInputElement>(null);
+
+  // Platform Preview Simulation Overlay State
+  const [previewPlatform, setPreviewPlatform] = useState<"clean" | "youtube" | "instagram" | "tiktok">("clean");
 
   // Studio Form State
   const [file, setFile] = useState<File | null>(null);
@@ -775,6 +790,218 @@ export default function Studio() {
                         </div>
                       </div>
                     )}
+
+                    {/* OVERLAY: YouTube Shorts Mockup */}
+                    {previewPlatform === "youtube" && (
+                      <div className="absolute inset-0 pointer-events-none z-15 flex flex-col justify-between p-3 select-none">
+                        {/* Top Bar */}
+                        <div className="flex items-center justify-between pt-6 px-1">
+                          <span className="text-[11px] font-black tracking-wide text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] flex items-center gap-1.5">
+                            <SiYoutube className="text-red-600" size={15} /> Shorts
+                          </span>
+                          <div className="flex items-center gap-2.5 text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+                            <Search size={15} />
+                            <MoreVertical size={15} />
+                          </div>
+                        </div>
+
+                        {/* Bottom Section */}
+                        <div className="relative flex items-end justify-between pb-10">
+                          {/* Left Info: Channel & Title */}
+                          <div className="space-y-1.5 max-w-[70%] drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+                            <div className="flex items-center gap-1.5">
+                              <div className="w-6 h-6 rounded-full bg-red-600 border border-white/40 flex items-center justify-center font-bold text-[9px] text-white">
+                                VX
+                              </div>
+                              <span className="text-xs font-bold text-white">@seu.canal</span>
+                              <span className="bg-white text-black font-bold text-[9px] px-2 py-0.5 rounded-full">
+                                Inscrever-se
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-white font-medium line-clamp-2 leading-tight">
+                              {title.trim() || "Título do seu vídeo no Shorts #shorts #viral"}
+                            </p>
+                            <div className="flex items-center gap-1 text-[10px] text-zinc-200">
+                              <Music size={10} className="shrink-0" />
+                              <span className="truncate">Som original - @seu.canal</span>
+                            </div>
+                          </div>
+
+                          {/* Right Action Stack */}
+                          <div className="flex flex-col items-center gap-2.5 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] text-white">
+                            <div className="flex flex-col items-center gap-0.5">
+                              <div className="w-8 h-8 rounded-full bg-black/35 backdrop-blur-sm flex items-center justify-center">
+                                <ThumbsUp size={15} />
+                              </div>
+                              <span className="text-[9px] font-semibold">124K</span>
+                            </div>
+                            <div className="flex flex-col items-center gap-0.5">
+                              <div className="w-8 h-8 rounded-full bg-black/35 backdrop-blur-sm flex items-center justify-center">
+                                <ThumbsDown size={15} />
+                              </div>
+                              <span className="text-[9px]">Dislike</span>
+                            </div>
+                            <div className="flex flex-col items-center gap-0.5">
+                              <div className="w-8 h-8 rounded-full bg-black/35 backdrop-blur-sm flex items-center justify-center">
+                                <MessageCircle size={15} />
+                              </div>
+                              <span className="text-[9px] font-semibold">1.4K</span>
+                            </div>
+                            <div className="flex flex-col items-center gap-0.5">
+                              <div className="w-8 h-8 rounded-full bg-black/35 backdrop-blur-sm flex items-center justify-center">
+                                <Share2 size={15} />
+                              </div>
+                              <span className="text-[9px] font-semibold">Share</span>
+                            </div>
+                            <div className="w-6 h-6 rounded-lg border border-white/60 bg-zinc-800 flex items-center justify-center mt-0.5">
+                              <Music size={10} className="text-white animate-pulse" />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* OVERLAY: Instagram Reels Mockup */}
+                    {previewPlatform === "instagram" && (
+                      <div className="absolute inset-0 pointer-events-none z-15 flex flex-col justify-between p-3 select-none">
+                        {/* Top Bar */}
+                        <div className="flex items-center justify-between pt-6 px-1">
+                          <span className="text-sm font-bold tracking-tight text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+                            Reels
+                          </span>
+                          <div className="text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+                            <MoreVertical size={16} />
+                          </div>
+                        </div>
+
+                        {/* Bottom Section */}
+                        <div className="relative flex items-end justify-between pb-10">
+                          {/* Left Info: Profile & Caption */}
+                          <div className="space-y-1.5 max-w-[70%] drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+                            <div className="flex items-center gap-1.5">
+                              <div className="w-6 h-6 rounded-full p-[1.5px] bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600">
+                                <div className="w-full h-full rounded-full bg-black flex items-center justify-center font-bold text-[8px] text-white">
+                                  IG
+                                </div>
+                              </div>
+                              <span className="text-xs font-bold text-white">seu_perfil</span>
+                              <span className="border border-white/60 text-white font-semibold text-[9px] px-2 py-0.5 rounded-md">
+                                Seguir
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-white leading-tight line-clamp-2">
+                              {title.trim() || "Legenda do Reels aqui... 🔥 #reels #explorar"}
+                            </p>
+                            <div className="flex items-center gap-1 text-[10px] text-zinc-200">
+                              <Music size={10} className="shrink-0" />
+                              <span className="truncate">Áudio original • seu_perfil</span>
+                            </div>
+                          </div>
+
+                          {/* Right Action Stack */}
+                          <div className="flex flex-col items-center gap-2.5 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] text-white">
+                            <div className="flex flex-col items-center gap-0.5">
+                              <div className="w-8 h-8 rounded-full bg-black/25 backdrop-blur-sm flex items-center justify-center">
+                                <Heart size={16} className="text-white" />
+                              </div>
+                              <span className="text-[9px] font-semibold">89.4K</span>
+                            </div>
+                            <div className="flex flex-col items-center gap-0.5">
+                              <div className="w-8 h-8 rounded-full bg-black/25 backdrop-blur-sm flex items-center justify-center">
+                                <MessageCircle size={16} className="text-white" />
+                              </div>
+                              <span className="text-[9px] font-semibold">942</span>
+                            </div>
+                            <div className="flex flex-col items-center gap-0.5">
+                              <div className="w-8 h-8 rounded-full bg-black/25 backdrop-blur-sm flex items-center justify-center">
+                                <Send size={15} className="text-white" />
+                              </div>
+                              <span className="text-[9px] font-semibold">14.2K</span>
+                            </div>
+                            <div className="flex flex-col items-center gap-0.5">
+                              <div className="w-8 h-8 rounded-full bg-black/25 backdrop-blur-sm flex items-center justify-center">
+                                <MoreVertical size={16} />
+                              </div>
+                            </div>
+                            <div className="w-6 h-6 rounded border border-white/50 bg-black/50 overflow-hidden flex items-center justify-center">
+                              <Music size={10} className="text-white" />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* OVERLAY: TikTok Mockup */}
+                    {previewPlatform === "tiktok" && (
+                      <div className="absolute inset-0 pointer-events-none z-15 flex flex-col justify-between p-3 select-none">
+                        {/* Top Bar */}
+                        <div className="flex items-center justify-between pt-6 px-1">
+                          <div className="w-5" />
+                          <div className="flex items-center gap-3 text-xs drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+                            <span className="text-white/60">Seguindo</span>
+                            <span className="font-bold text-white border-b-2 border-white pb-0.5">Para Você</span>
+                          </div>
+                          <div className="text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+                            <Search size={16} />
+                          </div>
+                        </div>
+
+                        {/* Bottom Section */}
+                        <div className="relative flex items-end justify-between pb-10">
+                          {/* Left Info: User & Description */}
+                          <div className="space-y-1.5 max-w-[70%] drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+                            <span className="text-xs font-bold text-white">@seutiktok</span>
+                            <p className="text-[11px] text-white leading-tight line-clamp-2">
+                              {title.trim() || "Assista até o final! 🔥 #fyp #viral #foryou"}
+                            </p>
+                            <div className="flex items-center gap-1 text-[10px] text-zinc-200">
+                              <Music size={10} className="shrink-0" />
+                              <span className="truncate">som original - @seutiktok</span>
+                            </div>
+                          </div>
+
+                          {/* Right Action Stack */}
+                          <div className="flex flex-col items-center gap-2.5 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] text-white">
+                            {/* Profile with red + */}
+                            <div className="relative mb-0.5">
+                              <div className="w-7 h-7 rounded-full border border-white bg-zinc-800 flex items-center justify-center text-[9px] font-bold text-white">
+                                TT
+                              </div>
+                              <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-full bg-red-500 text-white flex items-center justify-center text-[9px] font-bold">
+                                +
+                              </div>
+                            </div>
+                            <div className="flex flex-col items-center gap-0.5">
+                              <div className="w-8 h-8 rounded-full bg-black/25 backdrop-blur-sm flex items-center justify-center">
+                                <Heart size={16} className="text-red-500 fill-red-500" />
+                              </div>
+                              <span className="text-[9px] font-semibold">248K</span>
+                            </div>
+                            <div className="flex flex-col items-center gap-0.5">
+                              <div className="w-8 h-8 rounded-full bg-black/25 backdrop-blur-sm flex items-center justify-center">
+                                <MessageCircle size={16} className="text-white fill-white/10" />
+                              </div>
+                              <span className="text-[9px] font-semibold">3.8K</span>
+                            </div>
+                            <div className="flex flex-col items-center gap-0.5">
+                              <div className="w-8 h-8 rounded-full bg-black/25 backdrop-blur-sm flex items-center justify-center">
+                                <Bookmark size={16} className="text-yellow-400 fill-yellow-400" />
+                              </div>
+                              <span className="text-[9px] font-semibold">19.2K</span>
+                            </div>
+                            <div className="flex flex-col items-center gap-0.5">
+                              <div className="w-8 h-8 rounded-full bg-black/25 backdrop-blur-sm flex items-center justify-center">
+                                <Share2 size={15} className="text-white" />
+                              </div>
+                              <span className="text-[9px] font-semibold">8.7K</span>
+                            </div>
+                            <div className="w-6 h-6 rounded-full bg-zinc-900 border border-zinc-700 flex items-center justify-center animate-[spin_4s_linear_infinite] mt-0.5">
+                              <div className="w-2 h-2 rounded-full bg-zinc-400" />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   // Empty State - Drag & Drop Target
@@ -801,18 +1028,77 @@ export default function Studio() {
               </div>
             </div>
 
-            {/* Quick Helper below Phone */}
-            {isLandscape ? (
-              <p className="text-xs text-amber-400/90 mt-3 text-center flex items-center justify-center gap-1.5 bg-amber-500/10 py-1.5 px-3 rounded-full border border-amber-500/20 max-w-[330px]">
-                <Info size={13} className="shrink-0" />
-                <span>Vídeo horizontal: exibido com tarjas pretas (letterbox) no Shorts e Reels.</span>
-              </p>
-            ) : (
-              <p className="text-xs text-muted-foreground mt-3 text-center flex items-center gap-1.5">
-                <Zap size={13} className="text-primary" />
-                <span>Vídeo vertical 9:16: preenchimento total nativo para mobile.</span>
-              </p>
-            )}
+            {/* 3 Botões de Simulação de Prévia nas Plataformas */}
+            <div className="w-full max-w-[320px] mt-3 space-y-2">
+              <div className="flex items-center justify-between px-1">
+                <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Sparkles size={12} className="text-primary" />
+                  <span>Simular prévia nativa:</span>
+                </span>
+                {previewPlatform !== "clean" && (
+                  <button
+                    type="button"
+                    onClick={() => setPreviewPlatform("clean")}
+                    className="text-[10px] text-zinc-400 hover:text-white transition-colors"
+                  >
+                    Desativar ✕
+                  </button>
+                )}
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {/* 1. YouTube Shorts */}
+                <button
+                  type="button"
+                  onClick={() => setPreviewPlatform((prev) => (prev === "youtube" ? "clean" : "youtube"))}
+                  className={`h-9 px-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all border ${
+                    previewPlatform === "youtube"
+                      ? "bg-red-500/20 border-red-500/70 text-white shadow-[0_0_12px_rgba(239,68,68,0.3)] ring-1 ring-red-500/50"
+                      : "bg-card/70 hover:bg-white/5 border-border/60 text-muted-foreground hover:text-white"
+                  }`}
+                  title="Simular visual no YouTube Shorts"
+                >
+                  <SiYoutube className={previewPlatform === "youtube" ? "text-red-500" : "text-zinc-400"} size={14} />
+                  <span>Shorts</span>
+                </button>
+
+                {/* 2. Instagram Reels */}
+                <button
+                  type="button"
+                  onClick={() => setPreviewPlatform((prev) => (prev === "instagram" ? "clean" : "instagram"))}
+                  className={`h-9 px-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all border ${
+                    previewPlatform === "instagram"
+                      ? "bg-gradient-to-r from-pink-500/25 via-purple-500/25 to-orange-500/25 border-pink-500/70 text-white shadow-[0_0_12px_rgba(236,72,153,0.3)] ring-1 ring-pink-500/50"
+                      : "bg-card/70 hover:bg-white/5 border-border/60 text-muted-foreground hover:text-white"
+                  }`}
+                  title="Simular visual no Instagram Reels"
+                >
+                  <SiInstagram className={previewPlatform === "instagram" ? "text-pink-400" : "text-zinc-400"} size={13} />
+                  <span>Reels</span>
+                </button>
+
+                {/* 3. TikTok */}
+                <button
+                  type="button"
+                  onClick={() => setPreviewPlatform((prev) => (prev === "tiktok" ? "clean" : "tiktok"))}
+                  className={`h-9 px-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all border ${
+                    previewPlatform === "tiktok"
+                      ? "bg-cyan-500/20 border-cyan-400/70 text-white shadow-[0_0_12px_rgba(6,182,212,0.3)] ring-1 ring-cyan-400/50"
+                      : "bg-card/70 hover:bg-white/5 border-border/60 text-muted-foreground hover:text-white"
+                  }`}
+                  title="Simular visual no TikTok"
+                >
+                  <SiTiktok className={previewPlatform === "tiktok" ? "text-cyan-400" : "text-zinc-400"} size={13} />
+                  <span>TikTok</span>
+                </button>
+              </div>
+
+              {isLandscape && (
+                <p className="text-[11px] text-amber-400/90 text-center flex items-center justify-center gap-1 pt-1">
+                  <Info size={11} className="shrink-0" />
+                  <span>Vídeo horizontal: letterbox automático nas redes.</span>
+                </p>
+              )}
+            </div>
           </div>
 
           {/* RIGHT COLUMN: The Ultra-Focused Publisher Cockpit */}
@@ -1146,8 +1432,17 @@ export default function Studio() {
                       setSelectedDate(now);
                       setCalendarMonth(now);
                       setScheduledTime(getCurrentLocalTime());
+                      setIsSchedulingOpen(true);
+                      // Rolar a tela suavemente para posicionar o calendário no centro
+                      setTimeout(() => {
+                        scheduleSectionRef.current?.scrollIntoView({
+                          behavior: "smooth",
+                          block: "center",
+                        });
+                      }, 120);
+                    } else {
+                      setIsSchedulingOpen(false);
                     }
-                    setIsSchedulingOpen(!isSchedulingOpen);
                   }}
                   className={`w-full h-14 sm:h-15 py-5 rounded-2xl font-black text-base sm:text-lg flex items-center justify-center gap-2.5 transition-all hover:scale-[1.01] active:scale-[0.99] ${
                     isSchedulingOpen
@@ -1160,7 +1455,10 @@ export default function Studio() {
                 </Button>
 
                 {isSchedulingOpen && (
-                  <div className="p-4 sm:p-5 rounded-2xl bg-card border border-primary/30 space-y-4 shadow-xl animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div
+                    ref={scheduleSectionRef}
+                    className="p-4 sm:p-5 rounded-2xl bg-card border-2 border-primary/40 space-y-4 shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200"
+                  >
                     {/* Calendar Header with Navigation */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -1249,20 +1547,34 @@ export default function Studio() {
                       })}
                     </div>
 
-                    {/* Horário da Publicação (Limpo e Centralizado) */}
+                    {/* Horário da Publicação (Limpo e Centralizado com Relógio em Destaque) */}
                     <div className="pt-3 border-t border-border/40 flex flex-col items-center justify-center text-center space-y-2">
-                      <label className="text-xs sm:text-sm font-bold text-zinc-200 flex items-center justify-center gap-2">
-                        <Clock size={16} className="text-primary" />
+                      <label
+                        className="text-xs sm:text-sm font-bold text-zinc-200 flex items-center justify-center gap-2 cursor-pointer hover:text-primary transition-colors"
+                        onClick={() => {
+                          try {
+                            timeInputRef.current?.showPicker?.();
+                          } catch {
+                            timeInputRef.current?.focus();
+                          }
+                        }}
+                      >
+                        <Clock size={16} className="text-primary animate-pulse" />
                         <span>Horário da publicação:</span>
                       </label>
-                      <div className="w-full max-w-[200px]">
+                      <div className="w-full max-w-[210px] relative">
                         <Input
+                          ref={timeInputRef}
                           type="time"
                           value={scheduledTime}
                           onChange={(e) => setScheduledTime(e.target.value)}
-                          className="w-full text-center text-lg sm:text-xl font-bold font-mono h-12 rounded-xl bg-background border-2 border-primary/40 focus:border-primary text-white shadow-[0_0_15px_rgba(124,58,237,0.2)]"
+                          className="w-full text-center text-lg sm:text-xl font-bold font-mono h-12 rounded-xl bg-background border-2 border-primary/50 focus:border-primary text-white shadow-[0_0_15px_rgba(124,58,237,0.25)] cursor-pointer pr-3"
                         />
                       </div>
+                      <p className="text-[11px] text-zinc-400 flex items-center justify-center gap-1">
+                        <Sparkles size={11} className="text-primary shrink-0" />
+                        <span>Dica: clique no reloginho para escolher horários rápidos</span>
+                      </p>
                     </div>
 
                     {/* Summary Card */}
@@ -1304,10 +1616,10 @@ export default function Studio() {
               </div>
 
               {/* Status Hint below button */}
-              <div className="flex flex-col sm:flex-row items-center justify-between text-xs text-muted-foreground mt-2 px-1 gap-1.5 text-center sm:text-left">
-                <span>⚡ Sem complicação, direto nas suas redes</span>
-                <Link href="/posts" className="hover:text-primary transition-colors">
-                  Ver histórico de publicações →
+              <div className="flex items-center justify-center text-xs text-muted-foreground mt-3 px-1">
+                <Link href="/posts" className="hover:text-primary transition-colors flex items-center gap-1.5 text-zinc-400 hover:text-white">
+                  <span>Ver histórico de publicações</span>
+                  <ArrowRight size={13} />
                 </Link>
               </div>
             </div>
