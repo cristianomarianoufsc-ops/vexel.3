@@ -125,3 +125,14 @@ O **VexelHub** nasceu da necessidade real do fundador de divulgar a sua banda vi
    * Testar a interface localmente.
 6. **Entrega no GitHub:**
    * Comitar e dar push na branch `main` do repositório `cristianomarianoufsc-ops/vexel.3` para acionar o deploy automático na Vercel.
+
+---
+
+## 6. Estratégia de Deploy Seguro Durante a Análise da Meta (Risco ZERO)
+
+> **Observação Importante para o Próximo Agente:**
+> O screencast enviado para a Meta App Review foi gravado com o layout anterior. Para garantir risco ZERO de reprovação por divergência visual se o analista da Meta abrir `https://vexel-2.vercel.app` nas próximas 24h a 48h:
+> 1. Construa o novo layout 9:16 primeiro em uma rota dedicada (ex: `/studio` ou `/v2`) ou ambiente de preview.
+> 2. O amigo/testador pode usar e testar por essa rota normalmente.
+> 3. Assim que a Meta aprovar oficialmente a análise, promova a rota `/studio` para ser a rota raiz `/`.
+
