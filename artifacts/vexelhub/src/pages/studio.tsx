@@ -91,15 +91,22 @@ export default function Studio() {
   const [isDragging, setIsDragging] = useState(false);
   const [fitMode, setFitMode] = useState<"contain" | "cover">("cover");
 
+  // Helper: Obter horário local atual no formato HH:mm
+  const getCurrentLocalTime = () => {
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, "0");
+    const minutes = String(now.getMinutes()).padStart(2, "0");
+    return `${hours}:${minutes}`;
+  };
+
   // Scheduling State
   const [isSchedulingOpen, setIsSchedulingOpen] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState<Date>(new Date());
-  const [selectedDate, setSelectedDate] = useState<Date>(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 1); // Padrão: amanhã
-    return d;
+  const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
+  const [scheduledTime, setScheduledTime] = useState<string>(() => {
+    const now = new Date();
+    return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
   });
-  const [scheduledTime, setScheduledTime] = useState("18:00");
   const [isScheduledSuccess, setIsScheduledSuccess] = useState(false);
 
   // Mini-calendar calculations (Domingo a Sábado)
@@ -1129,16 +1136,27 @@ export default function Studio() {
                 )}
               </Button>
 
-              {/* Opção de Agendamento Simples */}
+              {/* Opção de Agendamento com Alto Destaque */}
               <div className="pt-3 space-y-3">
                 <Button
                   type="button"
-                  variant="outline"
-                  onClick={() => setIsSchedulingOpen(!isSchedulingOpen)}
-                  className="w-full h-11 border-border/70 hover:bg-white/5 text-muted-foreground hover:text-white flex items-center justify-center gap-2 rounded-xl text-xs sm:text-sm font-medium transition-colors"
+                  onClick={() => {
+                    if (!isSchedulingOpen) {
+                      const now = new Date();
+                      setSelectedDate(now);
+                      setCalendarMonth(now);
+                      setScheduledTime(getCurrentLocalTime());
+                    }
+                    setIsSchedulingOpen(!isSchedulingOpen);
+                  }}
+                  className={`w-full h-14 sm:h-15 py-5 rounded-2xl font-black text-base sm:text-lg flex items-center justify-center gap-2.5 transition-all hover:scale-[1.01] active:scale-[0.99] ${
+                    isSchedulingOpen
+                      ? "bg-gradient-to-r from-violet-950/80 via-purple-900/80 to-indigo-950/80 text-white border-2 border-primary/60 shadow-[0_0_20px_rgba(124,58,237,0.25)] hover:bg-white/10"
+                      : "bg-gradient-to-r from-indigo-600 via-purple-600 to-violet-700 hover:from-indigo-500 hover:to-violet-600 text-white shadow-[0_0_25px_rgba(99,102,241,0.35)] border border-indigo-400/40"
+                  }`}
                 >
-                  <CalendarIcon size={15} className="text-primary" />
-                  <span>{isSchedulingOpen ? "Fechar Opções de Agendamento" : "Ou Agendar para Mais Tarde"}</span>
+                  <CalendarIcon size={20} className="text-white" />
+                  <span>{isSchedulingOpen ? "Fechar Opções de Agendamento" : "AGENDAR PARA MAIS TARDE 📅"}</span>
                 </Button>
 
                 {isSchedulingOpen && (
@@ -1206,7 +1224,12 @@ export default function Studio() {
                             key={day.toISOString()}
                             type="button"
                             disabled={isPast}
-                            onClick={() => setSelectedDate(day)}
+                            onClick={() => {
+                              setSelectedDate(day);
+                              if (isToday(day)) {
+                                setScheduledTime(getCurrentLocalTime());
+                              }
+                            }}
                             className={`aspect-square h-8 sm:h-9 w-full rounded-xl text-xs font-semibold flex flex-col items-center justify-center relative transition-all ${
                               isSelected
                                 ? "bg-primary text-white font-bold shadow-[0_0_15px_rgba(124,58,237,0.45)] ring-2 ring-primary ring-offset-2 ring-offset-background"
@@ -1226,78 +1249,19 @@ export default function Studio() {
                       })}
                     </div>
 
-                    {/* Presets & Time Picker */}
-                    <div className="pt-3 border-t border-border/40 space-y-3">
-                      {/* Presets de Engajamento */}
-                      <div className="space-y-1.5">
-                        <span className="text-[11px] text-muted-foreground block">
-                          Atalhos rápidos com maior engajamento:
-                        </span>
-                        <div className="flex flex-wrap gap-1.5">
-                          {[
-                            { label: "Hoje 18:00", offset: 0, time: "18:00" },
-                            { label: "Hoje 20:30", offset: 0, time: "20:30" },
-                            { label: "Amanhã 12:00", offset: 1, time: "12:00" },
-                            { label: "Amanhã 19:00", offset: 1, time: "19:00" },
-                          ].map((preset) => (
-                            <button
-                              key={preset.label}
-                              type="button"
-                              onClick={() => {
-                                const target = new Date();
-                                target.setDate(target.getDate() + preset.offset);
-                                setSelectedDate(target);
-                                setCalendarMonth(target);
-                                setScheduledTime(preset.time);
-                              }}
-                              className="text-[11px] px-2.5 py-1 rounded-lg bg-muted/30 hover:bg-primary/20 hover:text-primary text-muted-foreground border border-border/40 transition-colors"
-                            >
-                              {preset.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Time Input with Quick Chips */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
-                        <div>
-                          <label className="text-[11px] font-semibold text-zinc-300 block mb-1.5 flex items-center gap-1.5">
-                            <Clock size={13} className="text-primary" /> Horário da publicação:
-                          </label>
-                          <Input
-                            type="time"
-                            value={scheduledTime}
-                            onChange={(e) => setScheduledTime(e.target.value)}
-                            className="bg-background/80 border-border focus:border-primary text-white text-xs h-9 rounded-xl font-mono"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="text-[11px] font-medium text-muted-foreground block mb-1.5">
-                            Horários mais assistidos:
-                          </label>
-                          <div className="grid grid-cols-3 gap-1.5">
-                            {[
-                              { time: "12:00", label: "Almoço" },
-                              { time: "18:00", label: "Pico" },
-                              { time: "20:30", label: "Noite" },
-                            ].map((p) => (
-                              <button
-                                key={p.time}
-                                type="button"
-                                onClick={() => setScheduledTime(p.time)}
-                                className={`px-2 py-1.5 rounded-lg border text-center transition-all ${
-                                  scheduledTime === p.time
-                                    ? "bg-primary/20 border-primary text-primary font-bold shadow-[0_0_8px_rgba(124,58,237,0.25)]"
-                                    : "bg-muted/20 hover:bg-white/5 border-border/40 text-muted-foreground hover:text-white"
-                                }`}
-                              >
-                                <div className="text-[11px] font-mono leading-none">{p.time}</div>
-                                <div className="text-[9px] text-zinc-400 leading-none mt-0.5">{p.label}</div>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
+                    {/* Horário da Publicação (Limpo e Centralizado) */}
+                    <div className="pt-3 border-t border-border/40 flex flex-col items-center justify-center text-center space-y-2">
+                      <label className="text-xs sm:text-sm font-bold text-zinc-200 flex items-center justify-center gap-2">
+                        <Clock size={16} className="text-primary" />
+                        <span>Horário da publicação:</span>
+                      </label>
+                      <div className="w-full max-w-[200px]">
+                        <Input
+                          type="time"
+                          value={scheduledTime}
+                          onChange={(e) => setScheduledTime(e.target.value)}
+                          className="w-full text-center text-lg sm:text-xl font-bold font-mono h-12 rounded-xl bg-background border-2 border-primary/40 focus:border-primary text-white shadow-[0_0_15px_rgba(124,58,237,0.2)]"
+                        />
                       </div>
                     </div>
 
