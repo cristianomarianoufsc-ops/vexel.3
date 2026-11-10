@@ -2,6 +2,9 @@
 
 > **NOVO DIRECIONAMENTO E ESPECIFICAÇÃO DE PRODUTO:**
 > Consulte o arquivo [`PLANO_NOVO_LAYOUT_MINIMALISTA.md`](./PLANO_NOVO_LAYOUT_MINIMALISTA.md) para ver a especificação completa da nova interface minimalista 9:16 ("O Anti-Metricool"), modelo de precificação (R$ 14,90/mês), e o status 100% verde da análise da Meta.
+>
+> **Status de Implementação (Novembro/2026):**
+> A nova interface minimalista 9:16 está implementada e disponível na rota `/studio` (e alias `/v2`), preservando a rota raiz `/` intacta durante a análise da Meta (Risco ZERO de reprovação). Conexão de plataformas, dropzone 9:16, geração de thumbnail, barra de progresso suave, celebração e card do plano de R$ 14,90/mês integrados. Navegação adicionada na sidebar ("Studio 9:16" com badge NOVO) e banner de atalho em `/publish`.
 
 ## 1. O que é o projeto
 
