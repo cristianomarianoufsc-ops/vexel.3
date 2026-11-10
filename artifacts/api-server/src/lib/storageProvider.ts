@@ -96,7 +96,17 @@ export async function downloadObject(
     const key = path.basename(objectPath.slice("/local-public/".length));
     const filePath = path.join(LOCAL_PUBLIC_STORAGE_DIR, key);
     const metaPath = `${filePath}.meta.json`;
-    const buffer = await fs.readFile(filePath);
+    let buffer: Buffer;
+    try {
+      buffer = await fs.readFile(filePath);
+    } catch (err: any) {
+      if (err?.code === "ENOENT") {
+        throw new Error(
+          "O arquivo de vídeo não foi encontrado no servidor temporário (o container reiniciou antes do agendamento). Reative o projeto no Supabase ou reconecte o Storage para manter vídeos persistentes.",
+        );
+      }
+      throw err;
+    }
     let contentType: string | null = "video/mp4";
     try {
       const meta = JSON.parse(await fs.readFile(metaPath, "utf8")) as { contentType?: string };

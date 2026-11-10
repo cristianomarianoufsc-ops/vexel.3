@@ -59,11 +59,17 @@ async function refreshYouTubeAccessToken(platform: YouTubePlatformConnection): P
   const data = (await response.json()) as GoogleTokenResponse;
 
   if (!response.ok || !data.access_token || !data.expires_in) {
-    throw new Error(
-      `Não foi possível renovar o acesso ao YouTube: ${
-        data.error_description || data.error || "resposta inválida do Google"
-      }`,
-    );
+    const errorMsg = data.error_description || data.error || "resposta inválida do Google";
+    if (
+      response.status === 400 ||
+      errorMsg.toLowerCase().includes("invalid_grant") ||
+      errorMsg.toLowerCase().includes("bad request")
+    ) {
+      throw new Error(
+        "A sessão do YouTube expirou (o token do Google expirou após 7 dias). Clique em 'Conectar canal' no Studio ou em Configurações para autorizar novamente.",
+      );
+    }
+    throw new Error(`Não foi possível renovar o acesso ao YouTube: ${errorMsg}`);
   }
 
   return {

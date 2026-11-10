@@ -176,7 +176,10 @@ export async function waitForInstagramContainer(options: {
 
     if (lastStatus === "FINISHED") return;
     if (["ERROR", "EXPIRED", "PUBLISHED"].includes(lastStatus)) {
-      throw new Error(`O Instagram não processou o vídeo (status: ${lastStatus}).`);
+      const subcode = status.status && status.status !== lastStatus ? ` (código Meta: ${status.status})` : "";
+      throw new Error(
+        `O Instagram não processou o vídeo (status: ${lastStatus}${subcode}). Causas comuns: link inacessível/expirado, vídeo sem faixa de áudio ou formato diferente de MP4/H.264.`,
+      );
     }
 
     await new Promise((resolve) => setTimeout(resolve, 5_000));
