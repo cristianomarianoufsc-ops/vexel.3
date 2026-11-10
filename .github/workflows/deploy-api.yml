@@ -33,6 +33,21 @@ jobs:
       - name: Set up flyctl
         uses: superfly/flyctl-actions/setup-flyctl@master
 
+      - name: Prepare Fly.io volume and scale
+        run: |
+          # Scale to 1 machine to match the single persistent volume
+          flyctl scale count 1 --app vexelhub-api -y || true
+
+          # Check if volume exists; if not, create 1GB volume in primary region
+          if ! flyctl volumes list --app vexelhub-api | grep -q "vexel_data"; then
+            echo "Criando volume persistente vexel_data (1GB em iad)..."
+            flyctl volumes create vexel_data --app vexelhub-api --region iad --size 1 -y
+          else
+            echo "Volume vexel_data já existe e está pronto."
+          fi
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
       # Build the image on the GitHub runner (Docker is available here) instead of
       # Fly's remote builder, which has returned registry 401 errors for this app.
       - name: Deploy

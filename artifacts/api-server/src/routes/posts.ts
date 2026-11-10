@@ -7,7 +7,7 @@ import {
   UpdatePostBody,
   ListPostsQueryParams,
 } from "@workspace/api-zod";
-import { downloadObject, getPublicUrl } from "../lib/storageProvider";
+import { downloadObject, getPublicUrl, cleanupObject } from "../lib/storageProvider";
 import { logger } from "../lib/logger";
 import { getUsableYouTubeAccessToken, uploadVideoToYouTube } from "../lib/youtube";
 import { uploadInstagramReel } from "../lib/instagram";
@@ -395,6 +395,10 @@ export async function runPublishJob(options: { id: number; userId: string }): Pr
         updatedAt: new Date(),
       })
       .where(and(eq(postsTable.id, id), eq(postsTable.userId, userId)));
+
+    if (allSuccess && post.videoObjectPath) {
+      await cleanupObject(post.videoObjectPath);
+    }
   } catch (error) {
     logger.error(
       { event: "post.publish_job.failed", postId: id, error },

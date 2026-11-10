@@ -42,10 +42,12 @@ router.get("/diagnostics", async (_req, res) => {
     hasSupabaseUrl: Boolean(process.env.SUPABASE_URL),
     supabaseHost,
     hasSupabaseKey: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY),
-    bucket: process.env.SUPABASE_STORAGE_BUCKET || "videos",
     supabaseTestSuccess,
     supabaseTestError,
     supabaseTestCause,
+    activeStorageProvider: (await import("../lib/storageProvider")).getStorageProvider(),
+    storageDir: (await import("../lib/storageProvider")).getLocalStorageDir(),
+    hasPersistentVolume: (await import("fs")).existsSync("/data"),
   });
 });
 

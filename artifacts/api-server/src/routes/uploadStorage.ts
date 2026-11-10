@@ -7,6 +7,7 @@ import { RequestUploadUrlBody } from "@workspace/api-zod";
 import {
   getUploadUrl,
   downloadObject,
+  getLocalStorageDir,
   LOCAL_PUBLIC_STORAGE_DIR,
 } from "../lib/storageProvider";
 import { logger } from "../lib/logger";
@@ -58,8 +59,9 @@ router.put(
         return;
       }
 
-      await fs.mkdir(LOCAL_PUBLIC_STORAGE_DIR, { recursive: true });
-      const filePath = path.join(LOCAL_PUBLIC_STORAGE_DIR, safeKey);
+      const storageDir = getLocalStorageDir();
+      await fs.mkdir(storageDir, { recursive: true });
+      const filePath = path.join(storageDir, safeKey);
       const bodyBuffer = Buffer.isBuffer(req.body)
         ? req.body
         : Buffer.from(req.body || "");
@@ -84,7 +86,8 @@ router.get("/storage/public-media/:key", async (req, res): Promise<void> => {
   try {
     const rawKey = Array.isArray(req.params.key) ? req.params.key[0] : req.params.key;
     const safeKey = path.basename(decodeURIComponent(rawKey || ""));
-    const filePath = path.join(LOCAL_PUBLIC_STORAGE_DIR, safeKey);
+    const storageDir = getLocalStorageDir();
+    const filePath = path.join(storageDir, safeKey);
     const metaPath = `${filePath}.meta.json`;
 
     await fs.access(filePath);

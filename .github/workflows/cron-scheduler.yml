@@ -1,0 +1,17 @@
+name: Cron Scheduler (Keep-Alive & Scheduled Posts)
+
+on:
+  schedule:
+    # Executes every 5 minutes to trigger the scheduled posts runner
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  tick:
+    name: Process scheduled posts
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Trigger scheduler
+        run: |
+          curl -fsS -X POST https://vexelhub-api.fly.dev/api/cron/process-scheduled || true
