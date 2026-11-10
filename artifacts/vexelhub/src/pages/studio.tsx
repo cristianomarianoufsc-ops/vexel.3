@@ -33,8 +33,26 @@ import {
   Smartphone,
   Info,
   Calendar as CalendarIcon,
-  Clock
+  Clock,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
+import { 
+  format, 
+  addMonths, 
+  subMonths, 
+  startOfMonth, 
+  endOfMonth, 
+  startOfWeek, 
+  endOfWeek, 
+  eachDayOfInterval, 
+  isSameDay, 
+  isSameMonth, 
+  isToday, 
+  isBefore, 
+  startOfDay 
+} from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { SiYoutube, SiInstagram, SiTiktok } from "react-icons/si";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -75,9 +93,21 @@ export default function Studio() {
 
   // Scheduling State
   const [isSchedulingOpen, setIsSchedulingOpen] = useState(false);
-  const [scheduledDate, setScheduledDate] = useState("");
-  const [scheduledTime, setScheduledTime] = useState("");
+  const [calendarMonth, setCalendarMonth] = useState<Date>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1); // Padrão: amanhã
+    return d;
+  });
+  const [scheduledTime, setScheduledTime] = useState("18:00");
   const [isScheduledSuccess, setIsScheduledSuccess] = useState(false);
+
+  // Mini-calendar calculations (Domingo a Sábado)
+  const monthStart = startOfMonth(calendarMonth);
+  const monthEnd = endOfMonth(calendarMonth);
+  const calendarStartDate = startOfWeek(monthStart, { weekStartsOn: 0 }); // Domingo
+  const calendarEndDate = endOfWeek(monthEnd, { weekStartsOn: 0 }); // Sábado
+  const calendarDays = eachDayOfInterval({ start: calendarStartDate, end: calendarEndDate });
 
   // Publishing Workflow State
   const [isPublishing, setIsPublishing] = useState(false);
@@ -347,7 +377,7 @@ export default function Studio() {
       return;
     }
 
-    if (mode === "schedule" && (!scheduledDate || !scheduledTime)) {
+    if (mode === "schedule" && (!selectedDate || !scheduledTime)) {
       toast({ title: "Data e hora obrigatórias", description: "Escolha a data e o horário para agendar o post.", variant: "destructive" });
       return;
     }
@@ -454,7 +484,11 @@ export default function Studio() {
 
       // 4. Se for agendamento, salva no banco e encerra com sucesso
       if (mode === "schedule") {
-        const scheduledAtISO = new Date(`${scheduledDate}T${scheduledTime}:00`).toISOString();
+        const year = selectedDate.getFullYear();
+        const month = String(selectedDate.getMonth() + 1).padStart(2, "0");
+        const day = String(selectedDate.getDate()).padStart(2, "0");
+        const scheduledAtISO = new Date(`${year}-${month}-${day}T${scheduledTime}:00`).toISOString();
+
         await createPost.mutateAsync({
           data: {
             title: title.trim(),
@@ -471,7 +505,7 @@ export default function Studio() {
         setIsScheduledSuccess(true);
         toast({
           title: "Post agendado com sucesso!",
-          description: `Seu post foi salvo para ${scheduledDate.split("-").reverse().slice(0, 2).join("/")} às ${scheduledTime}.`,
+          description: `Seu post foi programado para ${format(selectedDate, "dd/MM", { locale: ptBR })} às ${scheduledTime}.`,
         });
         return;
       }
@@ -632,13 +666,13 @@ export default function Studio() {
       </header>
 
       {/* Main Studio Arena */}
-      <main className="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 lg:p-8 flex flex-col justify-center">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+      <main className="flex-1 max-w-6xl w-full mx-auto px-4 pt-2 sm:pt-3 pb-8 sm:pb-12 lg:px-8 flex flex-col">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
           
           {/* LEFT COLUMN: The 9:16 Smartphone Mockup Preview */}
-          <div className="lg:col-span-5 flex flex-col items-center">
+          <div className="lg:col-span-5 flex flex-col items-center lg:sticky lg:top-16">
             {/* Phone Device Bezel */}
-            <div className="relative w-full max-w-[310px] sm:max-w-[330px] aspect-[9/16] rounded-[42px] p-3 bg-zinc-950/90 border border-white/10 shadow-[0_0_50px_rgba(124,58,237,0.18)] ring-1 ring-white/5 backdrop-blur-2xl flex flex-col transition-all">
+            <div className="relative w-full max-w-[280px] sm:max-w-[300px] lg:w-auto lg:h-[min(510px,calc(100vh-140px))] aspect-[9/16] rounded-[36px] sm:rounded-[38px] p-2.5 sm:p-3 bg-zinc-950/90 border border-white/10 shadow-[0_0_40px_rgba(124,58,237,0.18)] ring-1 ring-white/5 backdrop-blur-2xl flex flex-col transition-all">
               
               {/* Speaker & Dynamic Notch */}
               <div className="w-full flex justify-center pb-2 pt-1 select-none pointer-events-none">
@@ -1065,78 +1099,197 @@ export default function Studio() {
                 </Button>
 
                 {isSchedulingOpen && (
-                  <div className="p-4 rounded-2xl bg-card border border-primary/30 space-y-3.5 shadow-lg animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="p-4 sm:p-5 rounded-2xl bg-card border border-primary/30 space-y-4 shadow-xl animate-in fade-in slide-in-from-top-2 duration-200">
+                    {/* Calendar Header with Navigation */}
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-white flex items-center gap-1.5">
-                        <Clock size={14} className="text-primary" /> Escolha quando publicar:
-                      </span>
-                      <span className="text-[11px] text-muted-foreground">Fuso horário local</span>
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-primary/15 border border-primary/25 flex items-center justify-center text-primary">
+                          <CalendarIcon size={14} />
+                        </div>
+                        <span className="text-sm font-bold text-white capitalize">
+                          {format(calendarMonth, "MMMM 'de' yyyy", { locale: ptBR })}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          disabled={isSameMonth(calendarMonth, new Date()) || isBefore(calendarMonth, new Date())}
+                          onClick={() => setCalendarMonth((prev) => subMonths(prev, 1))}
+                          className="h-7 w-7 p-0 text-muted-foreground hover:text-white hover:bg-white/10 rounded-lg disabled:opacity-20"
+                          title="Mês anterior"
+                        >
+                          <ChevronLeft size={16} />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setCalendarMonth((prev) => addMonths(prev, 1))}
+                          className="h-7 w-7 p-0 text-muted-foreground hover:text-white hover:bg-white/10 rounded-lg"
+                          title="Próximo mês"
+                        >
+                          <ChevronRight size={16} />
+                        </Button>
+                      </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                      <div>
-                        <label className="text-[11px] font-medium text-zinc-300 block mb-1">Data:</label>
-                        <Input
-                          type="date"
-                          value={scheduledDate}
-                          min={new Date().toISOString().split("T")[0]}
-                          onChange={(e) => setScheduledDate(e.target.value)}
-                          className="bg-background border-border focus:border-primary text-white text-xs h-10 rounded-lg"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[11px] font-medium text-zinc-300 block mb-1">Horário:</label>
-                        <Input
-                          type="time"
-                          value={scheduledTime}
-                          onChange={(e) => setScheduledTime(e.target.value)}
-                          className="bg-background border-border focus:border-primary text-white text-xs h-10 rounded-lg"
-                        />
-                      </div>
+                    {/* Days of Week (Dom a Sáb) */}
+                    <div className="grid grid-cols-7 gap-1 text-center">
+                      {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((dayName, idx) => (
+                        <div
+                          key={dayName}
+                          className={`text-[10px] sm:text-[11px] font-bold py-1 select-none ${
+                            idx === 0 || idx === 6 ? "text-primary/70" : "text-muted-foreground"
+                          }`}
+                        >
+                          {dayName}
+                        </div>
+                      ))}
                     </div>
 
-                    {/* Presets de Horários de Pico */}
-                    <div className="space-y-1.5 pt-1">
-                      <span className="text-[11px] text-muted-foreground block">Horários com maior engajamento:</span>
-                      <div className="flex flex-wrap gap-1.5">
-                        {[
-                          { label: "Hoje 18:00", dateOffset: 0, time: "18:00" },
-                          { label: "Hoje 20:30", dateOffset: 0, time: "20:30" },
-                          { label: "Amanhã 12:00", dateOffset: 1, time: "12:00" },
-                          { label: "Amanhã 19:00", dateOffset: 1, time: "19:00" },
-                        ].map((preset) => (
+                    {/* Calendar Day Squares */}
+                    <div className="grid grid-cols-7 gap-1 sm:gap-1.5">
+                      {calendarDays.map((day) => {
+                        const isSelected = isSameDay(day, selectedDate);
+                        const isCurrentMonth = isSameMonth(day, calendarMonth);
+                        const isPast = isBefore(startOfDay(day), startOfDay(new Date()));
+                        const isCurrentDay = isToday(day);
+
+                        return (
                           <button
-                            key={preset.label}
+                            key={day.toISOString()}
                             type="button"
-                            onClick={() => {
-                              const target = new Date();
-                              target.setDate(target.getDate() + preset.dateOffset);
-                              setScheduledDate(target.toISOString().split("T")[0]);
-                              setScheduledTime(preset.time);
-                            }}
-                            className="text-[11px] px-2.5 py-1 rounded-md bg-muted/40 hover:bg-primary/20 hover:text-primary text-muted-foreground border border-border/40 transition-colors"
+                            disabled={isPast}
+                            onClick={() => setSelectedDate(day)}
+                            className={`aspect-square h-8 sm:h-9 w-full rounded-xl text-xs font-semibold flex flex-col items-center justify-center relative transition-all ${
+                              isSelected
+                                ? "bg-primary text-white font-bold shadow-[0_0_15px_rgba(124,58,237,0.45)] ring-2 ring-primary ring-offset-2 ring-offset-background"
+                                : isPast
+                                ? "text-zinc-600 opacity-25 cursor-not-allowed hover:bg-transparent"
+                                : !isCurrentMonth
+                                ? "text-zinc-500 hover:bg-white/5 hover:text-zinc-300"
+                                : "text-zinc-200 hover:bg-white/10 hover:text-white"
+                            } ${isCurrentDay && !isSelected ? "border border-primary/50 text-primary" : ""}`}
                           >
-                            {preset.label}
+                            <span>{format(day, "d")}</span>
+                            {isCurrentDay && !isSelected && (
+                              <span className="w-1 h-1 rounded-full bg-primary mt-0.5" />
+                            )}
                           </button>
-                        ))}
+                        );
+                      })}
+                    </div>
+
+                    {/* Presets & Time Picker */}
+                    <div className="pt-3 border-t border-border/40 space-y-3">
+                      {/* Presets de Engajamento */}
+                      <div className="space-y-1.5">
+                        <span className="text-[11px] text-muted-foreground block">
+                          Atalhos rápidos com maior engajamento:
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {[
+                            { label: "Hoje 18:00", offset: 0, time: "18:00" },
+                            { label: "Hoje 20:30", offset: 0, time: "20:30" },
+                            { label: "Amanhã 12:00", offset: 1, time: "12:00" },
+                            { label: "Amanhã 19:00", offset: 1, time: "19:00" },
+                          ].map((preset) => (
+                            <button
+                              key={preset.label}
+                              type="button"
+                              onClick={() => {
+                                const target = new Date();
+                                target.setDate(target.getDate() + preset.offset);
+                                setSelectedDate(target);
+                                setCalendarMonth(target);
+                                setScheduledTime(preset.time);
+                              }}
+                              className="text-[11px] px-2.5 py-1 rounded-lg bg-muted/30 hover:bg-primary/20 hover:text-primary text-muted-foreground border border-border/40 transition-colors"
+                            >
+                              {preset.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Time Input with Quick Chips */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
+                        <div>
+                          <label className="text-[11px] font-semibold text-zinc-300 block mb-1.5 flex items-center gap-1.5">
+                            <Clock size={13} className="text-primary" /> Horário da publicação:
+                          </label>
+                          <Input
+                            type="time"
+                            value={scheduledTime}
+                            onChange={(e) => setScheduledTime(e.target.value)}
+                            className="bg-background/80 border-border focus:border-primary text-white text-xs h-9 rounded-xl font-mono"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[11px] font-medium text-muted-foreground block mb-1.5">
+                            Horários mais assistidos:
+                          </label>
+                          <div className="grid grid-cols-3 gap-1.5">
+                            {[
+                              { time: "12:00", label: "Almoço" },
+                              { time: "18:00", label: "Pico" },
+                              { time: "20:30", label: "Noite" },
+                            ].map((p) => (
+                              <button
+                                key={p.time}
+                                type="button"
+                                onClick={() => setScheduledTime(p.time)}
+                                className={`px-2 py-1.5 rounded-lg border text-center transition-all ${
+                                  scheduledTime === p.time
+                                    ? "bg-primary/20 border-primary text-primary font-bold shadow-[0_0_8px_rgba(124,58,237,0.25)]"
+                                    : "bg-muted/20 hover:bg-white/5 border-border/40 text-muted-foreground hover:text-white"
+                                }`}
+                              >
+                                <div className="text-[11px] font-mono leading-none">{p.time}</div>
+                                <div className="text-[9px] text-zinc-400 leading-none mt-0.5">{p.label}</div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
                       </div>
                     </div>
 
+                    {/* Summary Card */}
+                    <div className="p-3 rounded-xl bg-primary/10 border border-primary/25 flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                        <span className="text-zinc-300">
+                          Programado: <strong className="text-white capitalize">{format(selectedDate, "EEEE, dd 'de' MMMM", { locale: ptBR })}</strong> às <strong className="text-primary font-mono">{scheduledTime}</strong>
+                        </span>
+                      </div>
+                      <Badge variant="outline" className="text-[10px] border-primary/30 text-primary">
+                        Fuso local
+                      </Badge>
+                    </div>
+
+                    {/* Confirm Schedule Button */}
                     <Button
                       type="button"
                       onClick={() => handlePublish("schedule")}
-                      disabled={isPublishing || !scheduledDate || !scheduledTime}
-                      className="w-full bg-primary/20 hover:bg-primary/30 text-primary hover:text-white border border-primary/40 font-bold text-xs sm:text-sm h-11 rounded-xl transition-all"
+                      disabled={isPublishing || !selectedDate || !scheduledTime}
+                      className="w-full bg-primary hover:bg-primary/90 text-white font-bold text-xs sm:text-sm h-11 rounded-xl transition-all shadow-[0_0_20px_rgba(124,58,237,0.3)] flex items-center justify-center gap-2"
                     >
                       {isPublishing ? (
                         <>
                           <Loader2 className="animate-spin mr-2" size={16} />
-                          <span>Agendando...</span>
+                          <span>Agendando publicação...</span>
                         </>
                       ) : (
-                        <span>
-                          Confirmar Agendamento {scheduledDate ? `para ${scheduledDate.split("-").reverse().slice(0, 2).join("/")}` : ""} {scheduledTime ? `às ${scheduledTime}` : ""}
-                        </span>
+                        <>
+                          <CalendarIcon size={16} />
+                          <span>
+                            Confirmar Agendamento ({format(selectedDate, "dd/MM", { locale: ptBR })} às {scheduledTime})
+                          </span>
+                        </>
                       )}
                     </Button>
                   </div>
@@ -1363,7 +1516,7 @@ export default function Studio() {
             <div className="flex justify-between items-center">
               <span className="text-muted-foreground">Data e Horário:</span>
               <span className="font-semibold text-white">
-                {scheduledDate ? scheduledDate.split("-").reverse().join("/") : ""} às {scheduledTime}
+                {selectedDate ? format(selectedDate, "dd/MM/yyyy", { locale: ptBR }) : ""} às {scheduledTime}
               </span>
             </div>
             <div className="flex justify-between items-center">
