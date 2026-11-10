@@ -4,7 +4,8 @@
 > Consulte o arquivo [`PLANO_NOVO_LAYOUT_MINIMALISTA.md`](./PLANO_NOVO_LAYOUT_MINIMALISTA.md) para ver a especificação completa da nova interface minimalista 9:16 ("O Anti-Metricool"), modelo de precificação (R$ 14,90/mês), e o status 100% verde da análise da Meta.
 >
 > **Status de Implementação (Novembro/2026):**
-> A nova interface minimalista 9:16 está implementada e disponível na rota `/studio` (e alias `/v2`), preservando a rota raiz `/` intacta durante a análise da Meta (Risco ZERO de reprovação). Conexão de plataformas, dropzone 9:16, geração de thumbnail, barra de progresso suave, celebração e card do plano de R$ 14,90/mês integrados. Navegação adicionada na sidebar ("Studio 9:16" com badge NOVO) e banner de atalho em `/publish`.
+> A nova interface minimalista 9:16 está implementada e disponível na rota `/studio` (e alias `/v2`), preservando a rota raiz `/` intacta durante a análise da Meta (Risco ZERO de reprovação). Conexão de plataformas, dropzone 9:16 com suporte inteligente a 16:9 (tarjas pretas/letterbox), geração de thumbnail, agendamento simples na interface, barra de progresso suave, celebração e card do plano de R$ 14,90/mês integrados.
+> O backend agora conta com um **Scheduler Automático** (`artifacts/api-server/src/lib/scheduler.ts`) que roda a cada 30 segundos verificando posts com `scheduledAt <= NOW()` e dispara a publicação simultânea de forma 100% autônoma, além do endpoint `/api/cron/process-scheduled`.
 
 ## 1. O que é o projeto
 

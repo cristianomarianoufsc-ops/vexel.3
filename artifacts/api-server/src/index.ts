@@ -1,5 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
+import { startScheduler, stopScheduler } from "./lib/scheduler";
 
 const rawPort = process.env["PORT"];
 
@@ -22,4 +23,14 @@ app.listen(port, (err) => {
   }
 
   logger.info({ port }, "Server listening");
+  startScheduler();
 });
+
+const handleShutdown = () => {
+  logger.info("Process terminating, stopping background tasks...");
+  stopScheduler();
+  process.exit(0);
+};
+
+process.on("SIGTERM", handleShutdown);
+process.on("SIGINT", handleShutdown);

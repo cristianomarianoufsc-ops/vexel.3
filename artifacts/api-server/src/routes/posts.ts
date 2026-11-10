@@ -174,7 +174,7 @@ router.delete("/posts/:id", requireAuth, async (req, res): Promise<void> => {
   res.json({ success: true });
 });
 
-type PublishPlatformResult = {
+export type PublishPlatformResult = {
   platform: string;
   status: string;
   progress: number;
@@ -186,7 +186,7 @@ type PublishPlatformResult = {
   errorMessage: string | null;
 };
 
-async function runPublishJob(options: { id: number; userId: string }): Promise<void> {
+export async function runPublishJob(options: { id: number; userId: string }): Promise<void> {
   const { id, userId } = options;
   const [post] = await db
     .select()

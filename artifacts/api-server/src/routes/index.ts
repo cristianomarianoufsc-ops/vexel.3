@@ -7,6 +7,7 @@ import ideasRouter from "./ideas";
 import assetsRouter from "./assets";
 import statsRouter from "./stats";
 import uploadStorageRouter from "./uploadStorage";
+import cronRouter from "./cron";
 
 const router: IRouter = Router();
 
@@ -18,5 +19,6 @@ router.use(ideasRouter);
 router.use(assetsRouter);
 router.use(statsRouter);
 router.use(uploadStorageRouter);
+router.use(cronRouter);
 
 export default router;
