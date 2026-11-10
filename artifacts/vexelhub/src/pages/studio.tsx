@@ -277,11 +277,18 @@ export default function Studio() {
     }
   };
 
-  const toggleVideoMute = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const toggleVideoMute = (e?: React.MouseEvent) => {
+    if (e && typeof e.stopPropagation === "function") {
+      e.stopPropagation();
+    }
     if (videoRef.current) {
-      videoRef.current.muted = !isMuted;
-      setIsMuted(!isMuted);
+      const nextMuted = !isMuted;
+      videoRef.current.muted = nextMuted;
+      if (!nextMuted) {
+        videoRef.current.volume = 1.0;
+        videoRef.current.play().catch(() => {});
+      }
+      setIsMuted(nextMuted);
     }
   };
 
@@ -695,48 +702,33 @@ export default function Studio() {
       </header>
 
       {/* Main Studio Arena */}
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 pt-2 sm:pt-3 pb-8 sm:pb-12 lg:px-8 flex flex-col">
+      <main className="flex-1 max-w-[1360px] w-full mx-auto px-4 pt-2 sm:pt-3 pb-8 sm:pb-12 lg:px-8 flex flex-col">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
           
-          {/* LEFT COLUMN: The 9:16 Smartphone Mockup Preview */}
-          <div className="lg:col-span-5 flex flex-col items-center lg:sticky lg:top-16">
-            
-            {/* Quick Action Navigation Buttons: Histórico & Calendário Modal */}
-            <div className="w-full max-w-[325px] sm:max-w-[340px] mb-2.5 flex flex-col gap-1.5">
-              <Link href="/posts">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="w-full h-8 px-3 rounded-xl bg-card/70 hover:bg-white/10 border-border/70 hover:border-primary/50 text-xs font-semibold text-zinc-300 hover:text-white flex items-center justify-between transition-all shadow-sm"
-                >
-                  <span className="flex items-center gap-2">
-                    <LayoutDashboard size={14} className="text-primary" />
-                    <span>Ver histórico de publicações</span>
-                  </span>
-                  <ArrowRight size={13} className="text-muted-foreground" />
-                </Button>
-              </Link>
+          {/* COLUMN 1: Quick Navigation on the Left (Simple Text Links, No Outline) */}
+          <div className="lg:col-span-2 flex flex-row lg:flex-col items-center lg:items-start justify-between lg:justify-start gap-4 lg:gap-3 py-1 lg:sticky lg:top-20 border-b border-border/30 lg:border-none pb-3 lg:pb-0">
+            <Link 
+              href="/posts"
+              className="text-xs sm:text-[13px] font-medium text-zinc-400 hover:text-white flex items-center gap-2 transition-colors hover:underline group"
+            >
+              <LayoutDashboard size={15} className="text-primary group-hover:scale-110 transition-transform shrink-0" />
+              <span>Ver histórico de publicações</span>
+            </Link>
 
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={openScheduleModal}
-                className="w-full h-8 px-3 rounded-xl bg-card/70 hover:bg-white/10 border-border/70 hover:border-primary/50 text-xs font-semibold text-zinc-300 hover:text-white flex items-center justify-between transition-all shadow-sm"
-              >
-                <span className="flex items-center gap-2">
-                  <CalendarIcon size={14} className="text-primary" />
-                  <span>Calendário de agendamento</span>
-                </span>
-                <span className="text-[10px] text-primary font-bold px-1.5 py-0.5 rounded bg-primary/10 border border-primary/20">
-                  Abrir 📅
-                </span>
-              </Button>
-            </div>
+            <button
+              type="button"
+              onClick={openScheduleModal}
+              className="text-xs sm:text-[13px] font-medium text-zinc-400 hover:text-white flex items-center gap-2 transition-colors hover:underline group text-left cursor-pointer"
+            >
+              <CalendarIcon size={15} className="text-primary group-hover:scale-110 transition-transform shrink-0" />
+              <span>Calendário de agendamento</span>
+            </button>
+          </div>
 
+          {/* COLUMN 2: The 9:16 Smartphone Mockup Preview */}
+          <div className="lg:col-span-4 flex flex-col items-center lg:sticky lg:top-16">
             {/* Phone Device Bezel */}
-            <div className="relative w-full max-w-[325px] sm:max-w-[340px] lg:w-auto lg:h-[min(510px,calc(100vh-140px))] aspect-[9/16] rounded-[38px] p-2.5 sm:p-3 bg-zinc-950/90 border border-white/10 shadow-[0_0_40px_rgba(124,58,237,0.22)] ring-1 ring-white/5 backdrop-blur-2xl flex flex-col transition-all">
+            <div className="relative w-full max-w-[320px] sm:max-w-[335px] lg:w-auto lg:h-[min(510px,calc(100vh-140px))] aspect-[9/16] rounded-[38px] p-2.5 sm:p-3 bg-zinc-950/90 border border-white/10 shadow-[0_0_40px_rgba(124,58,237,0.22)] ring-1 ring-white/5 backdrop-blur-2xl flex flex-col transition-all">
               
               {/* Speaker & Dynamic Notch */}
               <div className="w-full flex justify-center pb-2 pt-1 select-none pointer-events-none">
@@ -785,14 +777,11 @@ export default function Studio() {
                       <div className="flex items-center gap-1.5">
                         <button
                           type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleVideoMute();
-                          }}
-                          className="w-8 h-8 rounded-full bg-black/75 hover:bg-black text-white flex items-center justify-center backdrop-blur-md border border-white/20 transition-all shadow-lg hover:scale-105 active:scale-95"
+                          onClick={toggleVideoMute}
+                          className="w-8 h-8 rounded-full bg-black/80 hover:bg-black text-white flex items-center justify-center backdrop-blur-md border border-white/20 transition-all shadow-lg hover:scale-105 active:scale-95 cursor-pointer"
                           title={isMuted ? "Ativar som" : "Desativar som"}
                         >
-                          {isMuted ? <VolumeX size={15} /> : <Volume2 size={15} />}
+                          {isMuted ? <VolumeX size={15} /> : <Volume2 size={15} className="text-green-400" />}
                         </button>
                         {isLandscape && (
                           <button
@@ -1141,7 +1130,7 @@ export default function Studio() {
           </div>
 
           {/* RIGHT COLUMN: The Ultra-Focused Publisher Cockpit */}
-          <div className="lg:col-span-7 flex flex-col gap-6">
+          <div className="lg:col-span-6 flex flex-col gap-6">
             
             <div className="space-y-1 text-center lg:text-left">
               <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
