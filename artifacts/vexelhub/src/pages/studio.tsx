@@ -672,7 +672,7 @@ export default function Studio() {
           {/* LEFT COLUMN: The 9:16 Smartphone Mockup Preview */}
           <div className="lg:col-span-5 flex flex-col items-center lg:sticky lg:top-16">
             {/* Phone Device Bezel */}
-            <div className="relative w-full max-w-[280px] sm:max-w-[300px] lg:w-auto lg:h-[min(510px,calc(100vh-140px))] aspect-[9/16] rounded-[36px] sm:rounded-[38px] p-2.5 sm:p-3 bg-zinc-950/90 border border-white/10 shadow-[0_0_40px_rgba(124,58,237,0.18)] ring-1 ring-white/5 backdrop-blur-2xl flex flex-col transition-all">
+            <div className="relative w-full max-w-[325px] sm:max-w-[340px] lg:w-auto lg:h-[min(510px,calc(100vh-140px))] aspect-[9/16] rounded-[38px] p-2.5 sm:p-3 bg-zinc-950/90 border border-white/10 shadow-[0_0_40px_rgba(124,58,237,0.22)] ring-1 ring-white/5 backdrop-blur-2xl flex flex-col transition-all">
               
               {/* Speaker & Dynamic Notch */}
               <div className="w-full flex justify-center pb-2 pt-1 select-none pointer-events-none">
@@ -775,13 +775,13 @@ export default function Studio() {
                     <div className="w-16 h-16 rounded-full bg-primary/10 border border-primary/30 text-primary flex items-center justify-center mb-4 shadow-[0_0_20px_rgba(124,58,237,0.25)] group-hover:scale-105 transition-transform">
                       <Plus size={32} />
                     </div>
-                    <p className="font-bold text-white text-base mb-1">
-                      Arraste o vídeo (9:16 ou 16:9)
+                    <p className="font-bold text-white text-base sm:text-lg mb-1">
+                      Toque para escolher seu vídeo
                     </p>
-                    <p className="text-xs text-muted-foreground mb-4">
-                      ou clique para selecionar do dispositivo
+                    <p className="text-xs sm:text-sm text-muted-foreground mb-4">
+                      ou arraste aqui (9:16 ou 16:9)
                     </p>
-                    <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[11px] text-zinc-400">
+                    <div className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs text-zinc-300">
                       <span>MP4 • MOV • WebM</span>
                     </div>
                   </div>
@@ -812,14 +812,10 @@ export default function Studio() {
           <div className="lg:col-span-7 flex flex-col gap-6">
             
             <div className="space-y-1">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-semibold mb-2">
-                <Sparkles size={13} />
-                <span>O "Anti-Metricool" — Sem Distrações</span>
-              </div>
               <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
                 Publicação Instantânea em 1 Clique
               </h1>
-              <p className="text-muted-foreground text-sm">
+              <p className="text-muted-foreground text-sm sm:text-base">
                 Envie uma vez e veja seu corte cair simultaneamente no YouTube Shorts, Instagram Reels e TikTok.
               </p>
             </div>
@@ -899,7 +895,7 @@ export default function Studio() {
                   return (
                     <div
                       onClick={() => isConnected && togglePlatform("youtube")}
-                      className={`relative p-3.5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between ${
+                      className={`relative p-3.5 sm:p-4 rounded-2xl border transition-all cursor-pointer flex flex-row sm:flex-col items-center sm:items-stretch justify-between gap-3 ${
                         isSelected && isConnected
                           ? "bg-primary/10 border-primary/50 shadow-[0_0_15px_rgba(124,58,237,0.15)]"
                           : isConnected
@@ -907,13 +903,33 @@ export default function Studio() {
                           : "bg-muted/10 border-border/30 opacity-80"
                       }`}
                     >
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="w-9 h-9 rounded-xl bg-[#FF0000]/15 flex items-center justify-center text-[#FF0000]">
+                      <div className="flex items-center sm:items-start sm:justify-between gap-3 flex-1 sm:flex-initial">
+                        <div className="w-10 h-10 sm:w-9 sm:h-9 rounded-xl bg-[#FF0000]/15 flex items-center justify-center text-[#FF0000] shrink-0">
                           <SiYoutube size={20} />
+                        </div>
+                        <div className="sm:hidden flex-1">
+                          <p className="font-bold text-white text-sm">YouTube Shorts</p>
+                          {isConnected ? (
+                            <p className="text-xs text-green-400 font-medium truncate flex items-center gap-1 mt-0.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
+                              {yt?.accountName || "Conectado"}
+                            </p>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleConnectPlatform("youtube");
+                              }}
+                              className="text-xs text-primary hover:underline font-semibold mt-0.5 flex items-center gap-1"
+                            >
+                              Conectar canal ➔
+                            </button>
+                          )}
                         </div>
                         {isConnected ? (
                           <div
-                            className={`w-5 h-5 rounded-md border flex items-center justify-center transition-colors ${
+                            className={`hidden sm:flex w-5 h-5 rounded-md border items-center justify-center transition-colors ${
                               isSelected ? "bg-primary border-primary text-white" : "border-border bg-card"
                             }`}
                           >
@@ -922,7 +938,7 @@ export default function Studio() {
                         ) : null}
                       </div>
 
-                      <div>
+                      <div className="hidden sm:block">
                         <p className="font-bold text-white text-sm">YouTube Shorts</p>
                         {isConnected ? (
                           <p className="text-[11px] text-green-400 font-medium truncate flex items-center gap-1 mt-0.5">
@@ -942,6 +958,17 @@ export default function Studio() {
                           </button>
                         )}
                       </div>
+
+                      {/* Mobile check indicator */}
+                      {isConnected ? (
+                        <div
+                          className={`sm:hidden w-6 h-6 rounded-lg border flex items-center justify-center transition-colors shrink-0 ${
+                            isSelected ? "bg-primary border-primary text-white" : "border-border bg-card"
+                          }`}
+                        >
+                          {isSelected && <Check size={14} strokeWidth={3} />}
+                        </div>
+                      ) : null}
                     </div>
                   );
                 })()}
@@ -955,7 +982,7 @@ export default function Studio() {
                   return (
                     <div
                       onClick={() => isConnected && togglePlatform("instagram")}
-                      className={`relative p-3.5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between ${
+                      className={`relative p-3.5 sm:p-4 rounded-2xl border transition-all cursor-pointer flex flex-row sm:flex-col items-center sm:items-stretch justify-between gap-3 ${
                         isSelected && isConnected
                           ? "bg-primary/10 border-primary/50 shadow-[0_0_15px_rgba(124,58,237,0.15)]"
                           : isConnected
@@ -963,13 +990,33 @@ export default function Studio() {
                           : "bg-muted/10 border-border/30 opacity-80"
                       }`}
                     >
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="w-9 h-9 rounded-xl bg-[#E1306C]/15 flex items-center justify-center text-[#E1306C]">
-                          <SiInstagram size={19} />
+                      <div className="flex items-center sm:items-start sm:justify-between gap-3 flex-1 sm:flex-initial">
+                        <div className="w-10 h-10 sm:w-9 sm:h-9 rounded-xl bg-[#E1306C]/15 flex items-center justify-center text-[#E1306C] shrink-0">
+                          <SiInstagram size={20} />
+                        </div>
+                        <div className="sm:hidden flex-1">
+                          <p className="font-bold text-white text-sm">Instagram Reels</p>
+                          {isConnected ? (
+                            <p className="text-xs text-green-400 font-medium truncate flex items-center gap-1 mt-0.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
+                              {ig?.accountName ? `@${ig.accountName}` : "Conectado"}
+                            </p>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleConnectPlatform("instagram");
+                              }}
+                              className="text-xs text-primary hover:underline font-semibold mt-0.5 flex items-center gap-1"
+                            >
+                              Conectar conta ➔
+                            </button>
+                          )}
                         </div>
                         {isConnected ? (
                           <div
-                            className={`w-5 h-5 rounded-md border flex items-center justify-center transition-colors ${
+                            className={`hidden sm:flex w-5 h-5 rounded-md border items-center justify-center transition-colors ${
                               isSelected ? "bg-primary border-primary text-white" : "border-border bg-card"
                             }`}
                           >
@@ -978,7 +1025,7 @@ export default function Studio() {
                         ) : null}
                       </div>
 
-                      <div>
+                      <div className="hidden sm:block">
                         <p className="font-bold text-white text-sm">Instagram Reels</p>
                         {isConnected ? (
                           <p className="text-[11px] text-green-400 font-medium truncate flex items-center gap-1 mt-0.5">
@@ -998,6 +1045,17 @@ export default function Studio() {
                           </button>
                         )}
                       </div>
+
+                      {/* Mobile check indicator */}
+                      {isConnected ? (
+                        <div
+                          className={`sm:hidden w-6 h-6 rounded-lg border flex items-center justify-center transition-colors shrink-0 ${
+                            isSelected ? "bg-primary border-primary text-white" : "border-border bg-card"
+                          }`}
+                        >
+                          {isSelected && <Check size={14} strokeWidth={3} />}
+                        </div>
+                      ) : null}
                     </div>
                   );
                 })()}
@@ -1011,7 +1069,7 @@ export default function Studio() {
                   return (
                     <div
                       onClick={() => isConnected && togglePlatform("tiktok")}
-                      className={`relative p-3.5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between ${
+                      className={`relative p-3.5 sm:p-4 rounded-2xl border transition-all cursor-pointer flex flex-row sm:flex-col items-center sm:items-stretch justify-between gap-3 ${
                         isSelected && isConnected
                           ? "bg-primary/10 border-primary/50 shadow-[0_0_15px_rgba(124,58,237,0.15)]"
                           : isConnected
@@ -1019,13 +1077,33 @@ export default function Studio() {
                           : "bg-muted/10 border-border/30 opacity-80"
                       }`}
                     >
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center text-white">
-                          <SiTiktok size={18} />
+                      <div className="flex items-center sm:items-start sm:justify-between gap-3 flex-1 sm:flex-initial">
+                        <div className="w-10 h-10 sm:w-9 sm:h-9 rounded-xl bg-white/10 flex items-center justify-center text-white shrink-0">
+                          <SiTiktok size={19} />
+                        </div>
+                        <div className="sm:hidden flex-1">
+                          <p className="font-bold text-white text-sm">TikTok</p>
+                          {isConnected ? (
+                            <p className="text-xs text-green-400 font-medium truncate flex items-center gap-1 mt-0.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
+                              {tt?.accountName || "Conectado"}
+                            </p>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleConnectPlatform("tiktok");
+                              }}
+                              className="text-xs text-primary hover:underline font-semibold mt-0.5 flex items-center gap-1"
+                            >
+                              Conectar conta ➔
+                            </button>
+                          )}
                         </div>
                         {isConnected ? (
                           <div
-                            className={`w-5 h-5 rounded-md border flex items-center justify-center transition-colors ${
+                            className={`hidden sm:flex w-5 h-5 rounded-md border items-center justify-center transition-colors ${
                               isSelected ? "bg-primary border-primary text-white" : "border-border bg-card"
                             }`}
                           >
@@ -1034,7 +1112,7 @@ export default function Studio() {
                         ) : null}
                       </div>
 
-                      <div>
+                      <div className="hidden sm:block">
                         <p className="font-bold text-white text-sm">TikTok</p>
                         {isConnected ? (
                           <p className="text-[11px] text-green-400 font-medium truncate flex items-center gap-1 mt-0.5">
@@ -1054,6 +1132,17 @@ export default function Studio() {
                           </button>
                         )}
                       </div>
+
+                      {/* Mobile check indicator */}
+                      {isConnected ? (
+                        <div
+                          className={`sm:hidden w-6 h-6 rounded-lg border flex items-center justify-center transition-colors shrink-0 ${
+                            isSelected ? "bg-primary border-primary text-white" : "border-border bg-card"
+                          }`}
+                        >
+                          {isSelected && <Check size={14} strokeWidth={3} />}
+                        </div>
+                      ) : null}
                     </div>
                   );
                 })()}
