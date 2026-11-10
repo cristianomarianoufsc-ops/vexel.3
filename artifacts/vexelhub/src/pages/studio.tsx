@@ -83,7 +83,6 @@ export default function Studio() {
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const scheduleSectionRef = useRef<HTMLDivElement>(null);
   const timeInputRef = useRef<HTMLInputElement>(null);
 
   // Platform Preview Simulation Overlay State
@@ -114,8 +113,8 @@ export default function Studio() {
     return `${hours}:${minutes}`;
   };
 
-  // Scheduling State
-  const [isSchedulingOpen, setIsSchedulingOpen] = useState(false);
+  // Scheduling State (Modal)
+  const [isSchedulingModalOpen, setIsSchedulingModalOpen] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState<Date>(new Date());
   const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
   const [scheduledTime, setScheduledTime] = useState<string>(() => {
@@ -123,6 +122,14 @@ export default function Studio() {
     return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
   });
   const [isScheduledSuccess, setIsScheduledSuccess] = useState(false);
+
+  const openScheduleModal = () => {
+    const now = new Date();
+    setSelectedDate(now);
+    setCalendarMonth(now);
+    setScheduledTime(getCurrentLocalTime());
+    setIsSchedulingModalOpen(true);
+  };
 
   // Mini-calendar calculations (Domingo a Sábado)
   const monthStart = startOfMonth(calendarMonth);
@@ -693,6 +700,41 @@ export default function Studio() {
           
           {/* LEFT COLUMN: The 9:16 Smartphone Mockup Preview */}
           <div className="lg:col-span-5 flex flex-col items-center lg:sticky lg:top-16">
+            
+            {/* Quick Action Navigation Buttons: Histórico & Calendário Modal */}
+            <div className="w-full max-w-[325px] sm:max-w-[340px] mb-2.5 flex flex-col gap-1.5">
+              <Link href="/posts">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full h-8 px-3 rounded-xl bg-card/70 hover:bg-white/10 border-border/70 hover:border-primary/50 text-xs font-semibold text-zinc-300 hover:text-white flex items-center justify-between transition-all shadow-sm"
+                >
+                  <span className="flex items-center gap-2">
+                    <LayoutDashboard size={14} className="text-primary" />
+                    <span>Ver histórico de publicações</span>
+                  </span>
+                  <ArrowRight size={13} className="text-muted-foreground" />
+                </Button>
+              </Link>
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={openScheduleModal}
+                className="w-full h-8 px-3 rounded-xl bg-card/70 hover:bg-white/10 border-border/70 hover:border-primary/50 text-xs font-semibold text-zinc-300 hover:text-white flex items-center justify-between transition-all shadow-sm"
+              >
+                <span className="flex items-center gap-2">
+                  <CalendarIcon size={14} className="text-primary" />
+                  <span>Calendário de agendamento</span>
+                </span>
+                <span className="text-[10px] text-primary font-bold px-1.5 py-0.5 rounded bg-primary/10 border border-primary/20">
+                  Abrir 📅
+                </span>
+              </Button>
+            </div>
+
             {/* Phone Device Bezel */}
             <div className="relative w-full max-w-[325px] sm:max-w-[340px] lg:w-auto lg:h-[min(510px,calc(100vh-140px))] aspect-[9/16] rounded-[38px] p-2.5 sm:p-3 bg-zinc-950/90 border border-white/10 shadow-[0_0_40px_rgba(124,58,237,0.22)] ring-1 ring-white/5 backdrop-blur-2xl flex flex-col transition-all">
               
@@ -738,12 +780,20 @@ export default function Studio() {
                       }`}
                     />
 
-                    {/* Top Overlay Badges */}
+                    {/* Top Overlay Controls: Mute/Sound on Top-Left, Trash on Top-Right */}
                     <div className="absolute top-3 inset-x-3 flex items-center justify-between z-20 pointer-events-auto">
                       <div className="flex items-center gap-1.5">
-                        <Badge className="bg-black/75 backdrop-blur-md border border-white/10 text-white font-mono text-[11px] px-2 py-0.5">
-                          {isLandscape ? "16:9" : "9:16"} • {formatDuration(videoDuration)}
-                        </Badge>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleVideoMute();
+                          }}
+                          className="w-8 h-8 rounded-full bg-black/75 hover:bg-black text-white flex items-center justify-center backdrop-blur-md border border-white/20 transition-all shadow-lg hover:scale-105 active:scale-95"
+                          title={isMuted ? "Ativar som" : "Desativar som"}
+                        >
+                          {isMuted ? <VolumeX size={15} /> : <Volume2 size={15} />}
+                        </button>
                         {isLandscape && (
                           <button
                             type="button"
@@ -751,7 +801,7 @@ export default function Studio() {
                               e.stopPropagation();
                               setFitMode((prev) => (prev === "contain" ? "cover" : "contain"));
                             }}
-                            className="px-2 py-0.5 rounded-full bg-black/75 hover:bg-black/90 backdrop-blur-md border border-white/15 text-[10px] text-white/90 hover:text-white flex items-center gap-1 transition-all"
+                            className="px-2 py-1 rounded-full bg-black/75 hover:bg-black/90 backdrop-blur-md border border-white/15 text-[10px] text-white/90 hover:text-white flex items-center gap-1 transition-all"
                             title="Alternar entre modo com tarjas pretas ou tela cheia"
                           >
                             {fitMode === "contain" ? "↕ Com Tarjas" : "⤢ Preencher"}
@@ -759,27 +809,16 @@ export default function Studio() {
                         )}
                       </div>
                       <button
-                        onClick={handleRemoveVideo}
-                        className="w-7 h-7 rounded-full bg-black/60 hover:bg-destructive text-white/80 hover:text-white flex items-center justify-center backdrop-blur-md border border-white/10 transition-colors"
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemoveVideo();
+                        }}
+                        className="w-8 h-8 rounded-full bg-black/75 hover:bg-destructive text-white/80 hover:text-white flex items-center justify-center backdrop-blur-md border border-white/20 transition-all shadow-lg hover:scale-105 active:scale-95"
                         title="Remover vídeo"
                       >
-                        <Trash2 size={13} />
+                        <Trash2 size={14} />
                       </button>
-                    </div>
-
-                    {/* Bottom Controls */}
-                    <div className="absolute bottom-3 inset-x-3 flex items-center justify-between z-20 pointer-events-auto">
-                      <button
-                        onClick={toggleVideoMute}
-                        className="w-8 h-8 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center backdrop-blur-md border border-white/10 transition-colors"
-                        title={isMuted ? "Ativar som" : "Desativar som"}
-                      >
-                        {isMuted ? <VolumeX size={15} /> : <Volume2 size={15} />}
-                      </button>
-
-                      <Badge className="bg-black/60 backdrop-blur-md border border-white/10 text-muted-foreground font-mono text-[11px]">
-                        {(file.size / (1024 * 1024)).toFixed(1)} MB
-                      </Badge>
                     </div>
 
                     {/* Play/Pause Overlay indicator */}
@@ -795,7 +834,7 @@ export default function Studio() {
                     {previewPlatform === "youtube" && (
                       <div className="absolute inset-0 pointer-events-none z-15 flex flex-col justify-between p-3 select-none">
                         {/* Top Bar */}
-                        <div className="flex items-center justify-between pt-6 px-1">
+                        <div className="flex items-center justify-between pt-12 px-1">
                           <span className="text-[11px] font-black tracking-wide text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] flex items-center gap-1.5">
                             <SiYoutube className="text-red-600" size={15} /> Shorts
                           </span>
@@ -805,16 +844,16 @@ export default function Studio() {
                           </div>
                         </div>
 
-                        {/* Bottom Section */}
-                        <div className="relative flex items-end justify-between pb-10">
+                        {/* Bottom Section (Posicionado no rodapé real) */}
+                        <div className="relative flex items-end justify-between pb-3 sm:pb-3.5">
                           {/* Left Info: Channel & Title */}
-                          <div className="space-y-1.5 max-w-[70%] drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
-                            <div className="flex items-center gap-1.5">
-                              <div className="w-6 h-6 rounded-full bg-red-600 border border-white/40 flex items-center justify-center font-bold text-[9px] text-white">
+                          <div className="space-y-1.5 max-w-[72%] drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+                            <div className="flex items-center gap-1.5 flex-nowrap">
+                              <div className="w-6 h-6 rounded-full bg-red-600 border border-white/40 flex items-center justify-center font-bold text-[9px] text-white shrink-0">
                                 VX
                               </div>
-                              <span className="text-xs font-bold text-white">@seu.canal</span>
-                              <span className="bg-white text-black font-bold text-[9px] px-2 py-0.5 rounded-full">
+                              <span className="text-xs font-bold text-white truncate max-w-[90px]">@seu.canal</span>
+                              <span className="bg-white text-black font-bold text-[9px] px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap">
                                 Inscrever-se
                               </span>
                             </div>
@@ -865,7 +904,7 @@ export default function Studio() {
                     {previewPlatform === "instagram" && (
                       <div className="absolute inset-0 pointer-events-none z-15 flex flex-col justify-between p-3 select-none">
                         {/* Top Bar */}
-                        <div className="flex items-center justify-between pt-6 px-1">
+                        <div className="flex items-center justify-between pt-12 px-1">
                           <span className="text-sm font-bold tracking-tight text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
                             Reels
                           </span>
@@ -874,18 +913,18 @@ export default function Studio() {
                           </div>
                         </div>
 
-                        {/* Bottom Section */}
-                        <div className="relative flex items-end justify-between pb-10">
+                        {/* Bottom Section (Posicionado no rodapé real) */}
+                        <div className="relative flex items-end justify-between pb-3 sm:pb-3.5">
                           {/* Left Info: Profile & Caption */}
-                          <div className="space-y-1.5 max-w-[70%] drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
-                            <div className="flex items-center gap-1.5">
-                              <div className="w-6 h-6 rounded-full p-[1.5px] bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600">
+                          <div className="space-y-1.5 max-w-[72%] drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+                            <div className="flex items-center gap-1.5 flex-nowrap">
+                              <div className="w-6 h-6 rounded-full p-[1.5px] bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 shrink-0">
                                 <div className="w-full h-full rounded-full bg-black flex items-center justify-center font-bold text-[8px] text-white">
                                   IG
                                 </div>
                               </div>
-                              <span className="text-xs font-bold text-white">seu_perfil</span>
-                              <span className="border border-white/60 text-white font-semibold text-[9px] px-2 py-0.5 rounded-md">
+                              <span className="text-xs font-bold text-white truncate max-w-[90px]">seu_perfil</span>
+                              <span className="border border-white/60 text-white font-semibold text-[9px] px-2 py-0.5 rounded-md shrink-0">
                                 Seguir
                               </span>
                             </div>
@@ -935,7 +974,7 @@ export default function Studio() {
                     {previewPlatform === "tiktok" && (
                       <div className="absolute inset-0 pointer-events-none z-15 flex flex-col justify-between p-3 select-none">
                         {/* Top Bar */}
-                        <div className="flex items-center justify-between pt-6 px-1">
+                        <div className="flex items-center justify-between pt-12 px-1">
                           <div className="w-5" />
                           <div className="flex items-center gap-3 text-xs drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
                             <span className="text-white/60">Seguindo</span>
@@ -946,10 +985,10 @@ export default function Studio() {
                           </div>
                         </div>
 
-                        {/* Bottom Section */}
-                        <div className="relative flex items-end justify-between pb-10">
+                        {/* Bottom Section (Posicionado no rodapé real) */}
+                        <div className="relative flex items-end justify-between pb-3 sm:pb-3.5">
                           {/* Left Info: User & Description */}
-                          <div className="space-y-1.5 max-w-[70%] drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+                          <div className="space-y-1.5 max-w-[72%] drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
                             <span className="text-xs font-bold text-white">@seutiktok</span>
                             <p className="text-[11px] text-white leading-tight line-clamp-2">
                               {title.trim() || "Assista até o final! 🔥 #fyp #viral #foryou"}
@@ -1422,211 +1461,195 @@ export default function Studio() {
                 )}
               </Button>
 
-              {/* Opção de Agendamento com Alto Destaque */}
-              <div className="pt-3 space-y-3">
+              {/* Opção de Agendamento com Alto Destaque que abre o Modal */}
+              <div className="pt-3">
                 <Button
                   type="button"
-                  onClick={() => {
-                    if (!isSchedulingOpen) {
-                      const now = new Date();
-                      setSelectedDate(now);
-                      setCalendarMonth(now);
-                      setScheduledTime(getCurrentLocalTime());
-                      setIsSchedulingOpen(true);
-                      // Rolar a tela suavemente para posicionar o calendário no centro
-                      setTimeout(() => {
-                        scheduleSectionRef.current?.scrollIntoView({
-                          behavior: "smooth",
-                          block: "center",
-                        });
-                      }, 120);
-                    } else {
-                      setIsSchedulingOpen(false);
-                    }
-                  }}
-                  className={`w-full h-14 sm:h-15 py-5 rounded-2xl font-black text-base sm:text-lg flex items-center justify-center gap-2.5 transition-all hover:scale-[1.01] active:scale-[0.99] ${
-                    isSchedulingOpen
-                      ? "bg-gradient-to-r from-violet-950/80 via-purple-900/80 to-indigo-950/80 text-white border-2 border-primary/60 shadow-[0_0_20px_rgba(124,58,237,0.25)] hover:bg-white/10"
-                      : "bg-gradient-to-r from-indigo-600 via-purple-600 to-violet-700 hover:from-indigo-500 hover:to-violet-600 text-white shadow-[0_0_25px_rgba(99,102,241,0.35)] border border-indigo-400/40"
-                  }`}
+                  onClick={openScheduleModal}
+                  className="w-full h-14 sm:h-15 py-5 rounded-2xl font-black text-base sm:text-lg flex items-center justify-center gap-2.5 transition-all hover:scale-[1.01] active:scale-[0.99] bg-gradient-to-r from-indigo-600 via-purple-600 to-violet-700 hover:from-indigo-500 hover:to-violet-600 text-white shadow-[0_0_25px_rgba(99,102,241,0.35)] border border-indigo-400/40"
                 >
                   <CalendarIcon size={20} className="text-white" />
-                  <span>{isSchedulingOpen ? "Fechar Opções de Agendamento" : "AGENDAR PARA MAIS TARDE 📅"}</span>
+                  <span>AGENDAR PARA MAIS TARDE 📅</span>
                 </Button>
-
-                {isSchedulingOpen && (
-                  <div
-                    ref={scheduleSectionRef}
-                    className="p-4 sm:p-5 rounded-2xl bg-card border-2 border-primary/40 space-y-4 shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200"
-                  >
-                    {/* Calendar Header with Navigation */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-lg bg-primary/15 border border-primary/25 flex items-center justify-center text-primary">
-                          <CalendarIcon size={14} />
-                        </div>
-                        <span className="text-sm font-bold text-white capitalize">
-                          {format(calendarMonth, "MMMM 'de' yyyy", { locale: ptBR })}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-1">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          disabled={isSameMonth(calendarMonth, new Date()) || isBefore(calendarMonth, new Date())}
-                          onClick={() => setCalendarMonth((prev) => subMonths(prev, 1))}
-                          className="h-7 w-7 p-0 text-muted-foreground hover:text-white hover:bg-white/10 rounded-lg disabled:opacity-20"
-                          title="Mês anterior"
-                        >
-                          <ChevronLeft size={16} />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setCalendarMonth((prev) => addMonths(prev, 1))}
-                          className="h-7 w-7 p-0 text-muted-foreground hover:text-white hover:bg-white/10 rounded-lg"
-                          title="Próximo mês"
-                        >
-                          <ChevronRight size={16} />
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Days of Week (Dom a Sáb) */}
-                    <div className="grid grid-cols-7 gap-1 text-center">
-                      {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((dayName, idx) => (
-                        <div
-                          key={dayName}
-                          className={`text-[10px] sm:text-[11px] font-bold py-1 select-none ${
-                            idx === 0 || idx === 6 ? "text-primary/70" : "text-muted-foreground"
-                          }`}
-                        >
-                          {dayName}
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Calendar Day Squares */}
-                    <div className="grid grid-cols-7 gap-1 sm:gap-1.5">
-                      {calendarDays.map((day) => {
-                        const isSelected = isSameDay(day, selectedDate);
-                        const isCurrentMonth = isSameMonth(day, calendarMonth);
-                        const isPast = isBefore(startOfDay(day), startOfDay(new Date()));
-                        const isCurrentDay = isToday(day);
-
-                        return (
-                          <button
-                            key={day.toISOString()}
-                            type="button"
-                            disabled={isPast}
-                            onClick={() => {
-                              setSelectedDate(day);
-                              if (isToday(day)) {
-                                setScheduledTime(getCurrentLocalTime());
-                              }
-                            }}
-                            className={`aspect-square h-8 sm:h-9 w-full rounded-xl text-xs font-semibold flex flex-col items-center justify-center relative transition-all ${
-                              isSelected
-                                ? "bg-primary text-white font-bold shadow-[0_0_15px_rgba(124,58,237,0.45)] ring-2 ring-primary ring-offset-2 ring-offset-background"
-                                : isPast
-                                ? "text-zinc-600 opacity-25 cursor-not-allowed hover:bg-transparent"
-                                : !isCurrentMonth
-                                ? "text-zinc-500 hover:bg-white/5 hover:text-zinc-300"
-                                : "text-zinc-200 hover:bg-white/10 hover:text-white"
-                            } ${isCurrentDay && !isSelected ? "border border-primary/50 text-primary" : ""}`}
-                          >
-                            <span>{format(day, "d")}</span>
-                            {isCurrentDay && !isSelected && (
-                              <span className="w-1 h-1 rounded-full bg-primary mt-0.5" />
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    {/* Horário da Publicação (Limpo e Centralizado com Relógio em Destaque) */}
-                    <div className="pt-3 border-t border-border/40 flex flex-col items-center justify-center text-center space-y-2">
-                      <label
-                        className="text-xs sm:text-sm font-bold text-zinc-200 flex items-center justify-center gap-2 cursor-pointer hover:text-primary transition-colors"
-                        onClick={() => {
-                          try {
-                            timeInputRef.current?.showPicker?.();
-                          } catch {
-                            timeInputRef.current?.focus();
-                          }
-                        }}
-                      >
-                        <Clock size={16} className="text-primary animate-pulse" />
-                        <span>Horário da publicação:</span>
-                      </label>
-                      <div className="w-full max-w-[210px] relative">
-                        <Input
-                          ref={timeInputRef}
-                          type="time"
-                          value={scheduledTime}
-                          onChange={(e) => setScheduledTime(e.target.value)}
-                          className="w-full text-center text-lg sm:text-xl font-bold font-mono h-12 rounded-xl bg-background border-2 border-primary/50 focus:border-primary text-white shadow-[0_0_15px_rgba(124,58,237,0.25)] cursor-pointer pr-3"
-                        />
-                      </div>
-                      <p className="text-[11px] text-zinc-400 flex items-center justify-center gap-1">
-                        <Sparkles size={11} className="text-primary shrink-0" />
-                        <span>Dica: clique no reloginho para escolher horários rápidos</span>
-                      </p>
-                    </div>
-
-                    {/* Summary Card */}
-                    <div className="p-3 rounded-xl bg-primary/10 border border-primary/25 flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                        <span className="text-zinc-300">
-                          Programado: <strong className="text-white capitalize">{format(selectedDate, "EEEE, dd 'de' MMMM", { locale: ptBR })}</strong> às <strong className="text-primary font-mono">{scheduledTime}</strong>
-                        </span>
-                      </div>
-                      <Badge variant="outline" className="text-[10px] border-primary/30 text-primary">
-                        Fuso local
-                      </Badge>
-                    </div>
-
-                    {/* Confirm Schedule Button */}
-                    <Button
-                      type="button"
-                      onClick={() => handlePublish("schedule")}
-                      disabled={isPublishing || !selectedDate || !scheduledTime}
-                      className="w-full bg-primary hover:bg-primary/90 text-white font-bold text-xs sm:text-sm h-11 rounded-xl transition-all shadow-[0_0_20px_rgba(124,58,237,0.3)] flex items-center justify-center gap-2"
-                    >
-                      {isPublishing ? (
-                        <>
-                          <Loader2 className="animate-spin mr-2" size={16} />
-                          <span>Agendando publicação...</span>
-                        </>
-                      ) : (
-                        <>
-                          <CalendarIcon size={16} />
-                          <span>
-                            Confirmar Agendamento ({format(selectedDate, "dd/MM", { locale: ptBR })} às {scheduledTime})
-                          </span>
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                )}
-              </div>
-
-              {/* Status Hint below button */}
-              <div className="flex items-center justify-center text-xs text-muted-foreground mt-3 px-1">
-                <Link href="/posts" className="hover:text-primary transition-colors flex items-center gap-1.5 text-zinc-400 hover:text-white">
-                  <span>Ver histórico de publicações</span>
-                  <ArrowRight size={13} />
-                </Link>
               </div>
             </div>
 
           </div>
         </div>
       </main>
+
+      {/* Modal do Calendário de Agendamento */}
+      <Dialog open={isSchedulingModalOpen} onOpenChange={setIsSchedulingModalOpen}>
+        <DialogContent className="sm:max-w-md bg-card/95 border-2 border-primary/40 backdrop-blur-2xl text-foreground p-5 sm:p-6 rounded-3xl shadow-[0_0_50px_rgba(124,58,237,0.35)]">
+          <DialogHeader className="space-y-1">
+            <DialogTitle className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+              <CalendarIcon size={20} className="text-primary" />
+              <span>Agendar Publicação</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm text-muted-foreground">
+              Escolha a data e o horário local para disparo automático nas suas redes.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 pt-2">
+            {/* Calendar Header with Navigation */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-primary/15 border border-primary/25 flex items-center justify-center text-primary">
+                  <CalendarIcon size={14} />
+                </div>
+                <span className="text-sm font-bold text-white capitalize">
+                  {format(calendarMonth, "MMMM 'de' yyyy", { locale: ptBR })}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-1">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  disabled={isSameMonth(calendarMonth, new Date()) || isBefore(calendarMonth, new Date())}
+                  onClick={() => setCalendarMonth((prev) => subMonths(prev, 1))}
+                  className="h-7 w-7 p-0 text-muted-foreground hover:text-white hover:bg-white/10 rounded-lg disabled:opacity-20"
+                  title="Mês anterior"
+                >
+                  <ChevronLeft size={16} />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setCalendarMonth((prev) => addMonths(prev, 1))}
+                  className="h-7 w-7 p-0 text-muted-foreground hover:text-white hover:bg-white/10 rounded-lg"
+                  title="Próximo mês"
+                >
+                  <ChevronRight size={16} />
+                </Button>
+              </div>
+            </div>
+
+            {/* Days of Week (Dom a Sáb) */}
+            <div className="grid grid-cols-7 gap-1 text-center">
+              {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((dayName, idx) => (
+                <div
+                  key={dayName}
+                  className={`text-[10px] sm:text-[11px] font-bold py-1 select-none ${
+                    idx === 0 || idx === 6 ? "text-primary/70" : "text-muted-foreground"
+                  }`}
+                >
+                  {dayName}
+                </div>
+              ))}
+            </div>
+
+            {/* Calendar Day Squares */}
+            <div className="grid grid-cols-7 gap-1 sm:gap-1.5">
+              {calendarDays.map((day) => {
+                const isSelected = isSameDay(day, selectedDate);
+                const isCurrentMonth = isSameMonth(day, calendarMonth);
+                const isPast = isBefore(startOfDay(day), startOfDay(new Date()));
+                const isCurrentDay = isToday(day);
+
+                return (
+                  <button
+                    key={day.toISOString()}
+                    type="button"
+                    disabled={isPast}
+                    onClick={() => {
+                      setSelectedDate(day);
+                      if (isToday(day)) {
+                        setScheduledTime(getCurrentLocalTime());
+                      }
+                    }}
+                    className={`aspect-square h-8 sm:h-9 w-full rounded-xl text-xs font-semibold flex flex-col items-center justify-center relative transition-all ${
+                      isSelected
+                        ? "bg-primary text-white font-bold shadow-[0_0_15px_rgba(124,58,237,0.45)] ring-2 ring-primary ring-offset-2 ring-offset-background"
+                        : isPast
+                        ? "text-zinc-600 opacity-25 cursor-not-allowed hover:bg-transparent"
+                        : !isCurrentMonth
+                        ? "text-zinc-500 hover:bg-white/5 hover:text-zinc-300"
+                        : "text-zinc-200 hover:bg-white/10 hover:text-white"
+                    } ${isCurrentDay && !isSelected ? "border border-primary/50 text-primary" : ""}`}
+                  >
+                    <span>{format(day, "d")}</span>
+                    {isCurrentDay && !isSelected && (
+                      <span className="w-1 h-1 rounded-full bg-primary mt-0.5" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Horário da Publicação (Limpo e Centralizado com Relógio em Destaque) */}
+            <div className="pt-3 border-t border-border/40 flex flex-col items-center justify-center text-center space-y-2">
+              <label
+                className="text-xs sm:text-sm font-bold text-zinc-200 flex items-center justify-center gap-2 cursor-pointer hover:text-primary transition-colors"
+                onClick={() => {
+                  try {
+                    timeInputRef.current?.showPicker?.();
+                  } catch {
+                    timeInputRef.current?.focus();
+                  }
+                }}
+              >
+                <Clock size={16} className="text-primary animate-pulse" />
+                <span>Horário da publicação:</span>
+              </label>
+              <div className="w-full max-w-[210px] relative">
+                <Input
+                  ref={timeInputRef}
+                  type="time"
+                  value={scheduledTime}
+                  onChange={(e) => setScheduledTime(e.target.value)}
+                  className="w-full text-center text-lg sm:text-xl font-bold font-mono h-12 rounded-xl bg-background border-2 border-primary/50 focus:border-primary text-white shadow-[0_0_15px_rgba(124,58,237,0.25)] cursor-pointer pr-3"
+                />
+              </div>
+              <p className="text-[11px] text-zinc-400 flex items-center justify-center gap-1">
+                <Sparkles size={11} className="text-primary shrink-0" />
+                <span>Dica: clique no reloginho para escolher horários rápidos</span>
+              </p>
+            </div>
+
+            {/* Summary Card */}
+            <div className="p-3 rounded-xl bg-primary/10 border border-primary/25 flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                <span className="text-zinc-300">
+                  Programado: <strong className="text-white capitalize">{format(selectedDate, "EEEE, dd 'de' MMMM", { locale: ptBR })}</strong> às <strong className="text-primary font-mono">{scheduledTime}</strong>
+                </span>
+              </div>
+              <Badge variant="outline" className="text-[10px] border-primary/30 text-primary">
+                Fuso local
+              </Badge>
+            </div>
+
+            {/* Confirm Schedule Button */}
+            <Button
+              type="button"
+              onClick={() => {
+                setIsSchedulingModalOpen(false);
+                handlePublish("schedule");
+              }}
+              disabled={isPublishing || !selectedDate || !scheduledTime}
+              className="w-full bg-primary hover:bg-primary/90 text-white font-bold text-sm h-12 rounded-xl transition-all shadow-[0_0_20px_rgba(124,58,237,0.3)] flex items-center justify-center gap-2"
+            >
+              {isPublishing ? (
+                <>
+                  <Loader2 className="animate-spin mr-2" size={16} />
+                  <span>Agendando publicação...</span>
+                </>
+              ) : (
+                <>
+                  <CalendarIcon size={16} />
+                  <span>
+                    Confirmar Agendamento ({format(selectedDate, "dd/MM", { locale: ptBR })} às {scheduledTime})
+                  </span>
+                </>
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Progress & Live Publishing Modal */}
       <Dialog open={showStatusModal} onOpenChange={(open) => !isPublishing && setShowStatusModal(open)}>
