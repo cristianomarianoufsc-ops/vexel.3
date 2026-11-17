@@ -146,6 +146,7 @@ export default function Studio() {
   const [statusMessage, setStatusMessage] = useState("");
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [livePlatformResults, setLivePlatformResults] = useState<PlatformResult[]>([]);
+  const [currentPostId, setCurrentPostId] = useState<number | null>(null);
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
   const [isPaywallOpen, setIsPaywallOpen] = useState(false);
   const [postsSentInSession, setPostsSentInSession] = useState(0);
