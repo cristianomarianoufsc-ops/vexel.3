@@ -1856,14 +1856,16 @@ export default function Studio() {
               >
                 Publicar Outro Vídeo
               </Button>
-              <Link href="/posts" className="flex-1">
-                <Button
-                  variant="outline"
-                  className="w-full border-white/10 hover:bg-white/5 text-muted-foreground hover:text-white rounded-xl h-11"
-                >
-                  Ver Histórico
-                </Button>
-              </Link>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsSuccessModalOpen(false);
+                  setIsPostsModalOpen(true);
+                }}
+                className="flex-1 border-white/10 hover:bg-white/5 text-muted-foreground hover:text-white rounded-xl h-11"
+              >
+                Ver Histórico
+              </Button>
             </div>
           </div>
         </DialogContent>
@@ -1984,13 +1986,15 @@ export default function Studio() {
             >
               Criar Outro Post
             </Button>
-            <Link href="/calendar" className="flex-1">
-              <Button
-                className="w-full bg-primary hover:bg-primary/90 text-white rounded-xl h-10 text-xs font-semibold"
-              >
-                Ver no Calendário
-              </Button>
-            </Link>
+            <Button
+              onClick={() => {
+                setIsScheduledSuccess(false);
+                setIsCalendarViewModalOpen(true);
+              }}
+              className="flex-1 bg-primary hover:bg-primary/90 text-white rounded-xl h-10 text-xs font-semibold"
+            >
+              Ver no Calendário
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
