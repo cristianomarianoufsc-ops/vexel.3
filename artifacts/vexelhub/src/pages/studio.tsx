@@ -146,8 +146,9 @@ export default function Studio() {
   const [statusMessage, setStatusMessage] = useState("");
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [livePlatformResults, setLivePlatformResults] = useState<PlatformResult[]>([]);
-  const [currentPostId, setCurrentPostId] = useState<number | null>(null);
-  const [isCelebrationOpen, setIsCelebrationOpen] = useState(false);
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+  const [isPaywallOpen, setIsPaywallOpen] = useState(false);
+  const [postsSentInSession, setPostsSentInSession] = useState(0);
 
   // API Hooks
   const { data: platforms = [], refetch: refetchPlatforms } = useListPlatforms();
@@ -421,6 +422,16 @@ export default function Studio() {
 
   // Execute publication or scheduling
   const handlePublish = async (mode: "now" | "schedule" = "now") => {
+    // Se o usuário já publicou nesta sessão, bloqueia a segunda tentativa e abre a janela de pagamento
+    if (postsSentInSession >= 1) {
+      setIsPaywallOpen(true);
+      toast({
+        title: "Limite de teste atingido",
+        description: "Seu 1º post gratuito foi utilizado! Assine o Plano Criador Ilimitado para continuar.",
+      });
+      return;
+    }
+
     if (!file) {
       toast({ title: "Vídeo obrigatório", description: "Por favor, arraste ou selecione um vídeo.", variant: "destructive" });
       return;
@@ -563,6 +574,7 @@ export default function Studio() {
         setIsPublishing(false);
         setShowStatusModal(false);
         setIsScheduledSuccess(true);
+        setPostsSentInSession((prev) => prev + 1);
         toast({
           title: "Post agendado com sucesso!",
           description: `Seu post foi programado para ${format(selectedDate, "dd/MM", { locale: ptBR })} às ${scheduledTime}.`,
@@ -610,7 +622,8 @@ export default function Studio() {
             setPublishStep("done");
             setIsPublishing(false);
             setShowStatusModal(false);
-            setIsCelebrationOpen(true);
+            setPostsSentInSession((prev) => prev + 1);
+            setIsSuccessModalOpen(true);
           }
         } catch {
           // Keep polling
@@ -630,7 +643,8 @@ export default function Studio() {
   };
 
   const handleResetForNewPost = () => {
-    setIsCelebrationOpen(false);
+    setIsSuccessModalOpen(false);
+    setIsPaywallOpen(false);
     setShowStatusModal(false);
     setFile(null);
     if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -1782,8 +1796,8 @@ export default function Studio() {
         </DialogContent>
       </Dialog>
 
-      {/* Celebration & R$ 14,90/mês Monetization Modal */}
-      <Dialog open={isCelebrationOpen} onOpenChange={setIsCelebrationOpen}>
+      {/* 1. Modal Limpo de Sucesso (Exibido após o envio bem-sucedido) */}
+      <Dialog open={isSuccessModalOpen} onOpenChange={setIsSuccessModalOpen}>
         <DialogContent className="sm:max-w-lg bg-zinc-950 border border-white/10 text-foreground p-6 sm:p-8 rounded-[32px] shadow-2xl">
           <div className="text-center space-y-4">
             
@@ -1830,6 +1844,47 @@ export default function Studio() {
                   )}
                 </div>
               ))}
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex items-center gap-3 pt-3">
+              <Button
+                variant="default"
+                onClick={handleResetForNewPost}
+                className="flex-1 bg-primary hover:bg-primary/90 text-white rounded-xl h-11 font-semibold"
+              >
+                Publicar Outro Vídeo
+              </Button>
+              <Link href="/posts" className="flex-1">
+                <Button
+                  variant="outline"
+                  className="w-full border-white/10 hover:bg-white/5 text-muted-foreground hover:text-white rounded-xl h-11"
+                >
+                  Ver Histórico
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 2. Modal de Bloqueio & Monetização (Exibido apenas na tentativa do 2º envio) */}
+      <Dialog open={isPaywallOpen} onOpenChange={setIsPaywallOpen}>
+        <DialogContent className="sm:max-w-lg bg-zinc-950 border border-white/10 text-foreground p-6 sm:p-8 rounded-[32px] shadow-2xl">
+          <div className="text-center space-y-4">
+            
+            {/* Crown Icon */}
+            <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-amber-500 to-purple-600 text-white flex items-center justify-center mx-auto shadow-[0_0_35px_rgba(245,158,11,0.4)]">
+              <Crown size={32} />
+            </div>
+
+            <div>
+              <h2 className="text-2xl sm:text-3xl font-black text-white">
+                Seu 1º Envio Gratuito Já Foi Utilizado!
+              </h2>
+              <p className="text-muted-foreground text-sm mt-1">
+                Você aproveitou seu teste gratuito. Para continuar publicando seus cortes sem limites no Shorts, Reels e TikTok, assine o Plano Criador.
+              </p>
             </div>
 
             {/* Free First Post Banner */}
@@ -1879,24 +1934,15 @@ export default function Studio() {
             </div>
 
             {/* Action buttons */}
-            <div className="flex items-center gap-3 pt-2">
+            <div className="pt-1">
               <Button
-                variant="outline"
-                onClick={handleResetForNewPost}
-                className="flex-1 border-white/10 hover:bg-white/5 text-white rounded-xl h-11"
+                variant="ghost"
+                onClick={() => setIsPaywallOpen(false)}
+                className="text-muted-foreground hover:text-white text-xs w-full"
               >
-                Publicar Outro Vídeo
+                Voltar ao estúdio
               </Button>
-              <Link href="/posts" className="flex-1">
-                <Button
-                  variant="ghost"
-                  className="w-full text-muted-foreground hover:text-white rounded-xl h-11"
-                >
-                  Ver Histórico
-                </Button>
-              </Link>
             </div>
-
           </div>
         </DialogContent>
       </Dialog>
