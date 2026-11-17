@@ -99,7 +99,8 @@ export default function Studio() {
   
   const [title, setTitle] = useState("");
   const [caption, setCaption] = useState("");
-  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(["youtube", "instagram", "tiktok"]);
+  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
+  const platformsInitializedRef = useRef(false);
   
   // Video Player Controls
   const [isPlaying, setIsPlaying] = useState(true);
@@ -163,7 +164,10 @@ export default function Studio() {
         const parsed = JSON.parse(savedDraft);
         if (parsed.title) setTitle(parsed.title);
         if (parsed.caption) setCaption(parsed.caption);
-        if (Array.isArray(parsed.selectedPlatforms)) setSelectedPlatforms(parsed.selectedPlatforms);
+        if (Array.isArray(parsed.selectedPlatforms)) {
+          setSelectedPlatforms(parsed.selectedPlatforms);
+          platformsInitializedRef.current = true;
+        }
         sessionStorage.removeItem("vexel_studio_draft");
       }
 
@@ -179,6 +183,15 @@ export default function Studio() {
       // ignore JSON parse errors
     }
   }, [toast]);
+
+  // Sincroniza automaticamente a seleção inicial apenas com plataformas CONECTADAS
+  useEffect(() => {
+    if (platforms && platforms.length > 0 && !platformsInitializedRef.current) {
+      const connectedPlatforms = platforms.filter((p) => p.isConnected).map((p) => p.platform);
+      setSelectedPlatforms(connectedPlatforms);
+      platformsInitializedRef.current = true;
+    }
+  }, [platforms]);
 
   // Cleanup object URLs on unmount
   useEffect(() => {
@@ -314,6 +327,14 @@ export default function Studio() {
   };
 
   const togglePlatform = (p: string) => {
+    const pl = platforms.find((item) => item.platform === p);
+    if (!pl?.isConnected) {
+      // Se a conta não está conectada, garante que não fica selecionada e abre o fluxo de conexão
+      setSelectedPlatforms((prev) => prev.filter((item) => item !== p));
+      handleConnectPlatform(p as "youtube" | "instagram" | "tiktok");
+      return;
+    }
+
     setSelectedPlatforms((prev) =>
       prev.includes(p) ? prev.filter((item) => item !== p) : [...prev, p]
     );
@@ -438,9 +459,10 @@ export default function Studio() {
     });
 
     if (unconnected.length > 0) {
+      setSelectedPlatforms((prev) => prev.filter((p) => !unconnected.includes(p)));
       toast({
         title: "Contas desconectadas",
-        description: `Conecte sua conta do ${unconnected.join(", ")} antes de continuar.`,
+        description: `Conecte sua conta do ${unconnected.join(", ")} antes de publicar nela, ou selecione apenas as redes conectadas.`,
         variant: "destructive",
       });
       return;
@@ -1203,16 +1225,27 @@ export default function Studio() {
                 <label className="text-sm font-semibold text-white">
                   Publicar em: <span className="text-xs font-normal text-muted-foreground">(O Trio de Ouro)</span>
                 </label>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (selectedPlatforms.length === 3) setSelectedPlatforms([]);
-                    else setSelectedPlatforms(["youtube", "instagram", "tiktok"]);
-                  }}
-                  className="text-xs text-primary hover:underline font-medium"
-                >
-                  {selectedPlatforms.length === 3 ? "Desmarcar todas" : "Selecionar todas"}
-                </button>
+                {(() => {
+                  const connectedIds = platforms.filter((p) => p.isConnected).map((p) => p.platform);
+                  const isAllConnectedSelected =
+                    connectedIds.length > 0 && connectedIds.every((id) => selectedPlatforms.includes(id));
+
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (isAllConnectedSelected) {
+                          setSelectedPlatforms([]);
+                        } else {
+                          setSelectedPlatforms(connectedIds);
+                        }
+                      }}
+                      className="text-xs text-primary hover:underline font-medium"
+                    >
+                      {isAllConnectedSelected ? "Desmarcar todas" : "Selecionar todas"}
+                    </button>
+                  );
+                })()}
               </div>
 
               <div className="grid grid-cols-3 gap-2 sm:gap-3">
@@ -1224,7 +1257,7 @@ export default function Studio() {
 
                   return (
                     <div
-                      onClick={() => isConnected && togglePlatform("youtube")}
+                      onClick={() => togglePlatform("youtube")}
                       className={`relative p-2.5 sm:p-3.5 rounded-2xl border transition-all cursor-pointer flex flex-col items-center justify-between text-center min-h-[96px] sm:min-h-[110px] select-none ${
                         isSelected && isConnected
                           ? "bg-primary/10 border-primary/60 shadow-[0_0_15px_rgba(124,58,237,0.2)]"
@@ -1296,7 +1329,7 @@ export default function Studio() {
 
                   return (
                     <div
-                      onClick={() => isConnected && togglePlatform("instagram")}
+                      onClick={() => togglePlatform("instagram")}
                       className={`relative p-2.5 sm:p-3.5 rounded-2xl border transition-all cursor-pointer flex flex-col items-center justify-between text-center min-h-[96px] sm:min-h-[110px] select-none ${
                         isSelected && isConnected
                           ? "bg-primary/10 border-primary/60 shadow-[0_0_15px_rgba(124,58,237,0.2)]"
@@ -1368,7 +1401,7 @@ export default function Studio() {
 
                   return (
                     <div
-                      onClick={() => isConnected && togglePlatform("tiktok")}
+                      onClick={() => togglePlatform("tiktok")}
                       className={`relative p-2.5 sm:p-3.5 rounded-2xl border transition-all cursor-pointer flex flex-col items-center justify-between text-center min-h-[96px] sm:min-h-[110px] select-none ${
                         isSelected && isConnected
                           ? "bg-primary/10 border-primary/60 shadow-[0_0_15px_rgba(124,58,237,0.2)]"
