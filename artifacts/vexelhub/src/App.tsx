@@ -89,7 +89,7 @@ const clerkAppearance = {
 function SignInPage() {
   return (
     <div className="flex min-h-[100dvh] items-center justify-center bg-background px-4">
-      <SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} />
+      <SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} fallbackRedirectUrl={`${basePath}/`} />
     </div>
   );
 }
@@ -97,21 +97,8 @@ function SignInPage() {
 function SignUpPage() {
   return (
     <div className="flex min-h-[100dvh] items-center justify-center bg-background px-4">
-      <SignUp routing="path" path={`${basePath}/sign-up`} signInUrl={`${basePath}/sign-in`} />
+      <SignUp routing="path" path={`${basePath}/sign-up`} signInUrl={`${basePath}/sign-in`} fallbackRedirectUrl={`${basePath}/`} />
     </div>
-  );
-}
-
-function HomeRedirect() {
-  return (
-    <>
-      <Show when="signed-in">
-        <Redirect to="/dashboard" />
-      </Show>
-      <Show when="signed-out">
-        <Home />
-      </Show>
-    </>
   );
 }
 
@@ -194,13 +181,14 @@ function ClerkProviderWithRoutes() {
         <ClerkQueryClientCacheInvalidator />
         <TooltipProvider>
           <Switch>
-            <Route path="/" component={HomeRedirect} />
+            {/* MODO OFICIAL: Studio 9:16 é a interface oficial padrão na raiz "/" e "/studio" */}
+            <Route path="/" component={Studio} />
             <Route path="/studio" component={Studio} />
             <Route path="/v2" component={Studio} />
-            <Route path="/sign-in/*?" component={SignInPage} />
-            <Route path="/sign-up/*?" component={SignUpPage} />
-            <Route path="/terms" component={() => <Legal type="terms" />} />
-            <Route path="/privacy" component={() => <Legal type="privacy" />} />
+
+            {/* MODO CLÁSSICO (STAND BY): Painel legado com todas as opções preservado */}
+            <Route path="/classic" component={() => <ProtectedRoute component={Dashboard} />} />
+            <Route path="/classic/landing" component={Home} />
             <Route path="/dashboard" component={() => <ProtectedRoute component={Dashboard} />} />
             <Route path="/publish" component={() => <ProtectedRoute component={Publish} />} />
             <Route path="/posts" component={() => <ProtectedRoute component={Posts} />} />
@@ -208,6 +196,11 @@ function ClerkProviderWithRoutes() {
             <Route path="/ideas" component={() => <ProtectedRoute component={Ideas} />} />
             <Route path="/assets" component={() => <ProtectedRoute component={Assets} />} />
             <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
+
+            <Route path="/sign-in/*?" component={SignInPage} />
+            <Route path="/sign-up/*?" component={SignUpPage} />
+            <Route path="/terms" component={() => <Legal type="terms" />} />
+            <Route path="/privacy" component={() => <Legal type="privacy" />} />
             <Route component={NotFound} />
           </Switch>
           <Toaster />

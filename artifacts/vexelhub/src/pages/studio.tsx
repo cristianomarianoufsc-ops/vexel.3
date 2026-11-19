@@ -669,26 +669,27 @@ export default function Studio() {
       {/* Sleek Minimalist Studio Header */}
       <header className="h-16 border-b border-border/40 bg-background/80 backdrop-blur-md px-4 sm:px-8 flex items-center justify-between sticky top-0 z-40">
         <div className="flex items-center gap-3">
-          <Link href="/studio" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
+          <Link href="/" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
             <img
               src={`${basePath}/vexelhub-logo.png`}
               alt="VexelHub"
               className="h-7 w-auto max-w-[130px] object-contain"
             />
           </Link>
-          <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-xs font-semibold text-primary">
+          <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-xs font-semibold text-primary">
             <Smartphone size={12} />
-            <span>Studio 9:16</span>
+            <span>Studio Oficial • 9:16</span>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
           {isSignedIn ? (
             <>
-              <Link href="/dashboard">
-                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-white flex items-center gap-1.5 text-xs sm:text-sm">
-                  <LayoutDashboard size={16} />
-                  <span className="hidden md:inline">Painel Completo</span>
+              <Link href="/classic">
+                <Button variant="ghost" size="sm" className="text-zinc-400 hover:text-white flex items-center gap-1.5 text-xs hover:bg-white/5 border border-white/10 rounded-xl" title="Acessar o painel avançado clássico (modo stand by)">
+                  <LayoutDashboard size={14} className="text-zinc-400" />
+                  <span className="hidden md:inline">Modo Clássico</span>
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500/30 text-amber-400/90 font-normal">stand by</Badge>
                 </Button>
               </Link>
               <div className="flex items-center gap-2 pl-2 border-l border-border/50">
@@ -763,6 +764,15 @@ export default function Studio() {
               <CalendarIcon size={15} className="text-primary group-hover:scale-110 transition-transform shrink-0" />
               <span>Calendário de agendamento</span>
             </button>
+
+            <Link
+              href="/classic"
+              className="text-xs sm:text-[12px] font-normal text-zinc-500 hover:text-zinc-300 flex items-center gap-2 transition-colors hover:underline group text-left pt-2 lg:border-t border-border/20 w-full"
+              title="Acessar o painel clássico legado com todas as opções"
+            >
+              <LayoutDashboard size={14} className="text-zinc-500 group-hover:text-zinc-300 shrink-0" />
+              <span>Painel clássico (stand by)</span>
+            </Link>
           </div>
 
           {/* COLUMN 2: The 9:16 Smartphone Mockup Preview */}

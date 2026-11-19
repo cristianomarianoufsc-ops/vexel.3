@@ -12,9 +12,9 @@ export default function NotFound() {
       <p className="text-xl text-muted-foreground max-w-md mb-8">
         A frequência que você está procurando não existe no nosso centro de comando.
       </p>
-      <Link href="/dashboard">
+      <Link href="/">
         <Button className="bg-primary hover:bg-primary/90 text-white shadow-[0_0_20px_rgba(124,58,237,0.3)]">
-          Voltar ao Painel
+          Voltar ao Studio
         </Button>
       </Link>
     </div>
