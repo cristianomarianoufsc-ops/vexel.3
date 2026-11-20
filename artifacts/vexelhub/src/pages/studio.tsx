@@ -1317,7 +1317,7 @@ export default function Studio() {
                   return (
                     <div
                       onClick={() => togglePlatform("youtube")}
-                      className={`relative p-2.5 sm:p-3.5 rounded-2xl border transition-all cursor-pointer flex flex-col items-center justify-between text-center min-h-[96px] sm:min-h-[110px] select-none ${
+                      className={`relative p-2.5 sm:p-3.5 rounded-2xl border transition-all cursor-pointer flex flex-col items-center justify-between text-center min-h-[118px] sm:min-h-[128px] select-none ${
                         isSelected && isConnected
                           ? "bg-primary/10 border-primary/60 shadow-[0_0_15px_rgba(124,58,237,0.2)]"
                           : isConnected
@@ -1346,34 +1346,40 @@ export default function Studio() {
                           <span className="hidden sm:inline">YouTube Shorts</span>
                         </p>
                         {isConnected ? (
-                          <div className="flex flex-col items-center">
-                            <p className="text-[10px] sm:text-[11px] text-green-400 font-medium truncate flex items-center justify-center gap-1 mt-0.5 max-w-full">
+                          <div className="flex flex-col items-center w-full mt-0.5">
+                            <p className="text-[10px] sm:text-[11px] text-green-400 font-medium truncate flex items-center justify-center gap-1 max-w-full">
                               <span className="w-1.5 h-1.5 rounded-full bg-green-400 shrink-0" />
                               <span className="truncate">{yt?.accountName || "Conectado"}</span>
                             </p>
+                            <div className="mt-2 w-full flex justify-center">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleConnectPlatform("youtube");
+                                }}
+                                className="inline-flex items-center justify-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-zinc-200 hover:text-white border border-white/10 transition-all shadow-sm active:scale-95 cursor-pointer"
+                                title="Reconectar conta do YouTube"
+                              >
+                                <RefreshCw size={11} className="shrink-0" />
+                                <span>Reconectar</span>
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="mt-2 w-full flex justify-center">
                             <button
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleConnectPlatform("youtube");
                               }}
-                              className="text-[9px] text-muted-foreground hover:text-white underline mt-0.5"
-                              title="Reconectar conta do YouTube"
+                              className="inline-flex items-center justify-center gap-1 text-xs text-primary hover:text-white bg-primary/10 hover:bg-primary/20 border border-primary/30 rounded-lg px-2.5 py-1 font-semibold transition-all cursor-pointer"
                             >
-                              reconectar
+                              <span>Conectar</span>
+                              <ArrowRight size={12} className="shrink-0" />
                             </button>
                           </div>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleConnectPlatform("youtube");
-                            }}
-                            className="text-[10px] sm:text-[11px] text-primary hover:underline font-semibold mt-0.5 block w-full truncate"
-                          >
-                            Conectar ➔
-                          </button>
                         )}
                       </div>
                     </div>
@@ -1395,7 +1401,7 @@ export default function Studio() {
                   if (isConnected1 && isConnected2) {
                     return (
                       <div
-                        className={`relative p-2 sm:p-2.5 rounded-2xl border transition-all flex flex-col justify-between min-h-[96px] sm:min-h-[110px] select-none ${
+                        className={`relative p-2.5 sm:p-3 rounded-2xl border transition-all flex flex-col justify-between min-h-[118px] sm:min-h-[128px] select-none ${
                           isAnySelected
                             ? "bg-primary/10 border-primary/60 shadow-[0_0_15px_rgba(124,58,237,0.2)]"
                             : "bg-card border-border/50 hover:border-border"
@@ -1405,52 +1411,52 @@ export default function Studio() {
                           <div className="w-5 h-5 rounded-md bg-[#E1306C]/15 flex items-center justify-center text-[#E1306C]">
                             <SiInstagram size={12} />
                           </div>
-                          <span className="text-[10px] font-bold text-white uppercase tracking-wider">
+                          <span className="text-[10px] sm:text-[11px] font-bold text-white uppercase tracking-wider">
                             Reels (2 contas)
                           </span>
                           <span className="w-2" />
                         </div>
 
-                        <div className="flex flex-col gap-1 w-full my-auto">
+                        <div className="flex flex-col gap-1.5 w-full my-auto">
                           {/* Conta 1 */}
                           <div
                             onClick={() => togglePlatform("instagram")}
-                            className={`flex items-center justify-between px-1.5 py-1 rounded-md border text-left cursor-pointer transition-colors ${
+                            className={`flex items-center justify-between px-2 py-1.5 rounded-lg border text-left cursor-pointer transition-colors ${
                               isSelected1
                                 ? "bg-primary/25 border-primary text-white"
                                 : "bg-muted/30 border-border/40 text-muted-foreground hover:text-white"
                             }`}
                           >
-                            <span className="text-[10px] font-medium truncate max-w-[70px] sm:max-w-[90px]">
+                            <span className="text-[11px] sm:text-xs font-medium truncate max-w-[75px] sm:max-w-[100px]">
                               @{ig1.accountName || "Conta 1"}
                             </span>
                             <div
-                              className={`w-3 h-3 rounded flex items-center justify-center border ${
+                              className={`w-3.5 h-3.5 rounded flex items-center justify-center border ${
                                 isSelected1 ? "bg-primary border-primary text-white" : "border-border/60"
                               }`}
                             >
-                              {isSelected1 && <Check size={8} strokeWidth={3} />}
+                              {isSelected1 && <Check size={9} strokeWidth={3} />}
                             </div>
                           </div>
 
                           {/* Conta 2 */}
                           <div
                             onClick={() => togglePlatform("instagram_2")}
-                            className={`flex items-center justify-between px-1.5 py-1 rounded-md border text-left cursor-pointer transition-colors ${
+                            className={`flex items-center justify-between px-2 py-1.5 rounded-lg border text-left cursor-pointer transition-colors ${
                               isSelected2
                                 ? "bg-primary/25 border-primary text-white"
                                 : "bg-muted/30 border-border/40 text-muted-foreground hover:text-white"
                             }`}
                           >
-                            <span className="text-[10px] font-medium truncate max-w-[70px] sm:max-w-[90px]">
+                            <span className="text-[11px] sm:text-xs font-medium truncate max-w-[75px] sm:max-w-[100px]">
                               @{ig2.accountName || "Conta 2"}
                             </span>
                             <div
-                              className={`w-3 h-3 rounded flex items-center justify-center border ${
+                              className={`w-3.5 h-3.5 rounded flex items-center justify-center border ${
                                 isSelected2 ? "bg-primary border-primary text-white" : "border-border/60"
                               }`}
                             >
-                              {isSelected2 && <Check size={8} strokeWidth={3} />}
+                              {isSelected2 && <Check size={9} strokeWidth={3} />}
                             </div>
                           </div>
                         </div>
@@ -1462,7 +1468,7 @@ export default function Studio() {
                   return (
                     <div
                       onClick={() => togglePlatform("instagram")}
-                      className={`relative p-2.5 sm:p-3.5 rounded-2xl border transition-all cursor-pointer flex flex-col items-center justify-between text-center min-h-[96px] sm:min-h-[110px] select-none ${
+                      className={`relative p-2.5 sm:p-3.5 rounded-2xl border transition-all cursor-pointer flex flex-col items-center justify-between text-center min-h-[118px] sm:min-h-[128px] select-none ${
                         isSelected1 && isConnected1
                           ? "bg-primary/10 border-primary/60 shadow-[0_0_15px_rgba(124,58,237,0.2)]"
                           : isConnected1
@@ -1491,48 +1497,52 @@ export default function Studio() {
                           <span className="hidden sm:inline">Instagram Reels</span>
                         </p>
                         {isConnected1 ? (
-                          <div className="flex flex-col items-center">
-                            <p className="text-[10px] sm:text-[11px] text-green-400 font-medium truncate flex items-center justify-center gap-1 mt-0.5 max-w-full">
+                          <div className="flex flex-col items-center w-full mt-0.5">
+                            <p className="text-[10px] sm:text-[11px] text-green-400 font-medium truncate flex items-center justify-center gap-1 max-w-full">
                               <span className="w-1.5 h-1.5 rounded-full bg-green-400 shrink-0" />
                               <span className="truncate">{ig1?.accountName ? `@${ig1.accountName}` : "Conectado"}</span>
                             </p>
-                            <div className="flex items-center gap-1.5 mt-0.5">
+                            <div className="flex flex-col sm:flex-row items-center justify-center gap-1.5 mt-2 w-full">
                               <button
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   handleConnectPlatform("instagram", 1);
                                 }}
-                                className="text-[9px] text-muted-foreground hover:text-white underline"
-                                title="Reconectar conta do Instagram"
+                                className="inline-flex items-center justify-center gap-1 text-[11px] sm:text-xs font-semibold px-2 sm:px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-zinc-200 hover:text-white border border-white/10 transition-all shadow-sm active:scale-95 cursor-pointer"
+                                title="Reconectar conta 1 do Instagram"
                               >
-                                reconectar
+                                <RefreshCw size={11} className="shrink-0" />
+                                <span>Reconectar</span>
                               </button>
-                              <span className="text-[9px] text-zinc-600">•</span>
                               <button
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   handleConnectPlatform("instagram", 2);
                                 }}
-                                className="text-[9px] text-primary hover:text-primary/80 font-bold"
+                                className="inline-flex items-center justify-center gap-1 text-[11px] sm:text-xs font-bold px-2 sm:px-2.5 py-1 rounded-lg bg-primary/20 hover:bg-primary/30 text-purple-300 hover:text-white border border-primary/40 transition-all shadow-sm active:scale-95 cursor-pointer whitespace-nowrap"
                                 title="Conectar 2ª conta do Instagram"
                               >
-                                + 2ª conta
+                                <Plus size={12} className="shrink-0" />
+                                <span>+ 2ª Conta</span>
                               </button>
                             </div>
                           </div>
                         ) : (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleConnectPlatform("instagram", 1);
-                            }}
-                            className="text-[10px] sm:text-[11px] text-primary hover:underline font-semibold mt-0.5 block w-full truncate"
-                          >
-                            Conectar ➔
-                          </button>
+                          <div className="mt-2 w-full flex justify-center">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleConnectPlatform("instagram", 1);
+                              }}
+                              className="inline-flex items-center justify-center gap-1 text-xs text-primary hover:text-white bg-primary/10 hover:bg-primary/20 border border-primary/30 rounded-lg px-2.5 py-1 font-semibold transition-all cursor-pointer"
+                            >
+                              <span>Conectar</span>
+                              <ArrowRight size={12} className="shrink-0" />
+                            </button>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -1548,7 +1558,7 @@ export default function Studio() {
                   return (
                     <div
                       onClick={() => togglePlatform("tiktok")}
-                      className={`relative p-2.5 sm:p-3.5 rounded-2xl border transition-all cursor-pointer flex flex-col items-center justify-between text-center min-h-[96px] sm:min-h-[110px] select-none ${
+                      className={`relative p-2.5 sm:p-3.5 rounded-2xl border transition-all cursor-pointer flex flex-col items-center justify-between text-center min-h-[118px] sm:min-h-[128px] select-none ${
                         isSelected && isConnected
                           ? "bg-primary/10 border-primary/60 shadow-[0_0_15px_rgba(124,58,237,0.2)]"
                           : isConnected
@@ -1576,34 +1586,40 @@ export default function Studio() {
                           TikTok
                         </p>
                         {isConnected ? (
-                          <div className="flex flex-col items-center">
-                            <p className="text-[10px] sm:text-[11px] text-green-400 font-medium truncate flex items-center justify-center gap-1 mt-0.5 max-w-full">
+                          <div className="flex flex-col items-center w-full mt-0.5">
+                            <p className="text-[10px] sm:text-[11px] text-green-400 font-medium truncate flex items-center justify-center gap-1 max-w-full">
                               <span className="w-1.5 h-1.5 rounded-full bg-green-400 shrink-0" />
                               <span className="truncate">{tt?.accountName || "Conectado"}</span>
                             </p>
+                            <div className="mt-2 w-full flex justify-center">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleConnectPlatform("tiktok");
+                                }}
+                                className="inline-flex items-center justify-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-zinc-200 hover:text-white border border-white/10 transition-all shadow-sm active:scale-95 cursor-pointer"
+                                title="Reconectar conta do TikTok"
+                              >
+                                <RefreshCw size={11} className="shrink-0" />
+                                <span>Reconectar</span>
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="mt-2 w-full flex justify-center">
                             <button
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleConnectPlatform("tiktok");
                               }}
-                              className="text-[9px] text-muted-foreground hover:text-white underline mt-0.5"
-                              title="Reconectar conta do TikTok"
+                              className="inline-flex items-center justify-center gap-1 text-xs text-primary hover:text-white bg-primary/10 hover:bg-primary/20 border border-primary/30 rounded-lg px-2.5 py-1 font-semibold transition-all cursor-pointer"
                             >
-                              reconectar
+                              <span>Conectar</span>
+                              <ArrowRight size={12} className="shrink-0" />
                             </button>
                           </div>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleConnectPlatform("tiktok");
-                            }}
-                            className="text-[10px] sm:text-[11px] text-primary hover:underline font-semibold mt-0.5 block w-full truncate"
-                          >
-                            Conectar ➔
-                          </button>
                         )}
                       </div>
                     </div>

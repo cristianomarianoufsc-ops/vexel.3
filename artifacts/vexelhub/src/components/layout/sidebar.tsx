@@ -2,11 +2,6 @@ import { Link, useLocation } from "wouter";
 import { useClerk, useUser } from "@clerk/react";
 import { 
   LayoutDashboard, 
-  UploadCloud, 
-  ListVideo, 
-  CalendarDays, 
-  Lightbulb, 
-  FolderOpen, 
   Settings, 
   LogOut,
   Smartphone
@@ -15,11 +10,6 @@ import { cn } from "@/lib/utils";
 
 const classicNavItems = [
   { href: "/dashboard", label: "Painel", icon: LayoutDashboard },
-  { href: "/publish", label: "Publicar", icon: UploadCloud },
-  { href: "/posts", label: "Posts", icon: ListVideo },
-  { href: "/calendar", label: "Calendário", icon: CalendarDays },
-  { href: "/ideas", label: "Ideias", icon: Lightbulb },
-  { href: "/assets", label: "Arquivos", icon: FolderOpen },
   { href: "/settings", label: "Configurações", icon: Settings },
 ];
 
