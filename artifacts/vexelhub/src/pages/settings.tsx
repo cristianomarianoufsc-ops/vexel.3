@@ -8,7 +8,7 @@ import { SiYoutube, SiInstagram, SiTiktok } from "react-icons/si";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 
-export default function Settings() {
+export default function Settings({ isModal = false }: { isModal?: boolean } = {}) {
   const [, setLocation] = useLocation();
   const [returnToStudio, setReturnToStudio] = useState(false);
   const { data: platforms = [], isLoading, refetch } = useListPlatforms();
@@ -16,10 +16,10 @@ export default function Settings() {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (sessionStorage.getItem("vexel_oauth_return_to") === "/studio") {
+    if (!isModal && sessionStorage.getItem("vexel_oauth_return_to") === "/studio") {
       setReturnToStudio(true);
     }
-  }, []);
+  }, [isModal]);
 
   const handleConnect = async (platformId: 'youtube' | 'instagram' | 'tiktok', slot?: number) => {
     const actionKey = slot ? `${platformId}_${slot}` : platformId;

@@ -46,7 +46,11 @@ import {
   Music,
   MoreVertical,
   Search,
-  Send
+  Send,
+  Settings as SettingsIcon,
+  Unlink2,
+  CalendarDays,
+  ListVideo
 } from "lucide-react";
 import { 
   format, 
@@ -74,6 +78,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import CalendarView from "./calendar";
 import PostsView from "./posts";
+import SettingsView from "./settings";
 
 const QUICK_HASHTAGS = ["#shorts", "#reels", "#tiktok", "#viral", "#foryou", "#cortes", "#podcast", "#musica"];
 
@@ -124,6 +129,7 @@ export default function Studio() {
   // Lateral Extra Modals (Grandes)
   const [isCalendarViewModalOpen, setIsCalendarViewModalOpen] = useState(false);
   const [isPostsModalOpen, setIsPostsModalOpen] = useState(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
   const [calendarMonth, setCalendarMonth] = useState<Date>(new Date());
   const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
@@ -393,6 +399,25 @@ export default function Studio() {
         description: "Não foi possível iniciar o login da plataforma.",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleDisconnectPlatform = async (platformId: "youtube" | "instagram" | "tiktok", slot?: number, accountLabel?: string) => {
+    const label = accountLabel || (slot ? `${platformId} (Conta ${slot})` : platformId);
+    if (!confirm(`Tem certeza que deseja desconectar ${label}?`)) return;
+    try {
+      const url = slot ? `/api/platforms/${platformId}?slot=${slot}` : `/api/platforms/${platformId}`;
+      await customFetch(url, { method: "DELETE" });
+      toast({ title: "Desconectado com sucesso" });
+      refetchPlatforms();
+      if (platformId === "instagram") {
+        const idToRemove = slot === 2 ? "instagram_2" : "instagram";
+        setSelectedPlatforms((prev) => prev.filter((p) => p !== idToRemove));
+      } else {
+        setSelectedPlatforms((prev) => prev.filter((p) => p !== platformId));
+      }
+    } catch (e) {
+      toast({ title: "Falha ao desconectar", variant: "destructive" });
     }
   };
 
@@ -773,34 +798,67 @@ export default function Studio() {
       <main className="flex-1 max-w-[1360px] w-full mx-auto px-4 pt-2 sm:pt-3 pb-8 sm:pb-12 lg:px-8 flex flex-col">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
           
-          {/* COLUMN 1: Quick Navigation on the Left (Simple Text Links, No Outline) */}
-          <div className="lg:col-span-2 flex flex-row lg:flex-col items-center lg:items-start justify-between lg:justify-start gap-4 lg:gap-3 py-1 lg:sticky lg:top-20 border-b border-border/30 lg:border-none pb-3 lg:pb-0">
-            <button 
-              type="button"
-              onClick={() => setIsPostsModalOpen(true)}
-              className="text-xs sm:text-[13px] font-medium text-zinc-400 hover:text-white flex items-center gap-2 transition-colors hover:underline group text-left cursor-pointer"
-            >
-              <LayoutDashboard size={15} className="text-primary group-hover:scale-110 transition-transform shrink-0" />
-              <span>Ver histórico de publicações</span>
-            </button>
+          {/* COLUMN 1: Left Navigation Sidebar */}
+          <div className="lg:col-span-2 flex flex-col gap-2 py-1 lg:sticky lg:top-20 w-full mb-3 lg:mb-0">
+            <div className="bg-zinc-900/80 border border-white/10 rounded-2xl p-2.5 sm:p-3 shadow-xl backdrop-blur-md flex flex-row lg:flex-col items-stretch justify-between lg:justify-start gap-1.5 w-full overflow-x-auto">
+              <div className="hidden lg:flex items-center justify-between px-2 py-1 border-b border-white/5 mb-1 select-none">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
+                  Navegação
+                </span>
+                <span className="text-[9px] px-1.5 py-0.2 rounded bg-primary/20 text-primary border border-primary/30 font-bold">
+                  Studio
+                </span>
+              </div>
 
-            <button
-              type="button"
-              onClick={() => setIsCalendarViewModalOpen(true)}
-              className="text-xs sm:text-[13px] font-medium text-zinc-400 hover:text-white flex items-center gap-2 transition-colors hover:underline group text-left cursor-pointer"
-            >
-              <CalendarIcon size={15} className="text-primary group-hover:scale-110 transition-transform shrink-0" />
-              <span>Calendário de agendamento</span>
-            </button>
+              {/* Botão Ver Histórico */}
+              <button 
+                type="button"
+                onClick={() => setIsPostsModalOpen(true)}
+                className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs sm:text-[13px] font-medium text-zinc-300 hover:text-white hover:bg-white/10 transition-all text-left cursor-pointer group whitespace-nowrap"
+              >
+                <ListVideo size={16} className="text-primary group-hover:scale-110 transition-transform shrink-0" />
+                <span>Histórico</span>
+              </button>
 
-            <Link
-              href="/classic"
-              className="text-xs sm:text-[12px] font-normal text-zinc-500 hover:text-zinc-300 flex items-center gap-2 transition-colors hover:underline group text-left pt-2 lg:border-t border-border/20 w-full"
-              title="Acessar o painel clássico legado com todas as opções"
-            >
-              <LayoutDashboard size={14} className="text-zinc-500 group-hover:text-zinc-300 shrink-0" />
-              <span>Painel clássico (stand by)</span>
-            </Link>
+              {/* Botão Calendário de Agendamento */}
+              <button
+                type="button"
+                onClick={() => setIsCalendarViewModalOpen(true)}
+                className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs sm:text-[13px] font-medium text-zinc-300 hover:text-white hover:bg-white/10 transition-all text-left cursor-pointer group whitespace-nowrap"
+              >
+                <CalendarDays size={16} className="text-primary group-hover:scale-110 transition-transform shrink-0" />
+                <span>Calendário</span>
+              </button>
+
+              {/* Botão Configurações (Abre tela dos apps configurados em modal) */}
+              <button
+                type="button"
+                onClick={() => setIsSettingsModalOpen(true)}
+                className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs sm:text-[13px] font-medium text-zinc-300 hover:text-white hover:bg-white/10 transition-all text-left cursor-pointer group whitespace-nowrap"
+              >
+                <SettingsIcon size={16} className="text-primary group-hover:scale-110 transition-transform shrink-0" />
+                <span>Configurações</span>
+              </button>
+
+              {/* Divisória no Desktop */}
+              <div className="hidden lg:block border-t border-white/5 my-1" />
+
+              {/* Link Modo Clássico */}
+              <Link
+                href="/classic"
+                className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-normal text-zinc-400 hover:text-zinc-200 hover:bg-white/5 transition-all text-left group whitespace-nowrap"
+                title="Acessar o painel clássico em stand by"
+              >
+                <div className="flex items-center gap-2">
+                  <LayoutDashboard size={15} className="text-zinc-500 group-hover:text-zinc-300 shrink-0" />
+                  <span className="hidden lg:inline">Modo Clássico</span>
+                  <span className="lg:hidden">Clássico</span>
+                </div>
+                <Badge variant="outline" className="hidden lg:inline-flex text-[9px] px-1.5 py-0 border-amber-500/30 text-amber-400/80 font-normal shrink-0 ml-1">
+                  stand by
+                </Badge>
+              </Link>
+            </div>
           </div>
 
           {/* COLUMN 2: The 9:16 Smartphone Mockup Preview */}
@@ -1356,13 +1414,13 @@ export default function Studio() {
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleConnectPlatform("youtube");
+                                  handleDisconnectPlatform("youtube", undefined, "YouTube Shorts");
                                 }}
-                                className="inline-flex items-center justify-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-zinc-200 hover:text-white border border-white/10 transition-all shadow-sm active:scale-95 cursor-pointer"
-                                title="Reconectar conta do YouTube"
+                                className="inline-flex items-center justify-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg bg-zinc-800/90 hover:bg-destructive/20 text-zinc-300 hover:text-red-400 border border-white/10 hover:border-destructive/30 transition-all shadow-sm active:scale-95 cursor-pointer"
+                                title="Desconectar conta do YouTube Shorts"
                               >
-                                <RefreshCw size={11} className="shrink-0" />
-                                <span>Reconectar</span>
+                                <Unlink2 size={12} className="shrink-0" />
+                                <span>Desconectar</span>
                               </button>
                             </div>
                           </div>
@@ -1460,6 +1518,20 @@ export default function Studio() {
                             </div>
                           </div>
                         </div>
+
+                        {/* Botão para gerenciar/desconectar contas pelo modal */}
+                        <div className="w-full flex justify-center mt-1">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setIsSettingsModalOpen(true);
+                            }}
+                            className="text-[10px] sm:text-[11px] text-zinc-400 hover:text-white underline cursor-pointer"
+                          >
+                            Gerenciar / Alterar
+                          </button>
+                        </div>
                       </div>
                     );
                   }
@@ -1502,18 +1574,18 @@ export default function Studio() {
                               <span className="w-1.5 h-1.5 rounded-full bg-green-400 shrink-0" />
                               <span className="truncate">{ig1?.accountName ? `@${ig1.accountName}` : "Conectado"}</span>
                             </p>
-                            <div className="flex flex-col sm:flex-row items-center justify-center gap-1.5 mt-2 w-full">
+                            <div className="flex flex-col items-center gap-1.5 mt-2 w-full">
                               <button
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleConnectPlatform("instagram", 1);
+                                  handleDisconnectPlatform("instagram", 1, `Instagram Conta 1 (@${ig1?.accountName || ""})`);
                                 }}
-                                className="inline-flex items-center justify-center gap-1 text-[11px] sm:text-xs font-semibold px-2 sm:px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-zinc-200 hover:text-white border border-white/10 transition-all shadow-sm active:scale-95 cursor-pointer"
-                                title="Reconectar conta 1 do Instagram"
+                                className="inline-flex items-center justify-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg bg-zinc-800/90 hover:bg-destructive/20 text-zinc-300 hover:text-red-400 border border-white/10 hover:border-destructive/30 transition-all shadow-sm active:scale-95 cursor-pointer"
+                                title="Desconectar Conta 1 do Instagram"
                               >
-                                <RefreshCw size={11} className="shrink-0" />
-                                <span>Reconectar</span>
+                                <Unlink2 size={12} className="shrink-0" />
+                                <span>Desconectar</span>
                               </button>
                               <button
                                 type="button"
@@ -1521,11 +1593,11 @@ export default function Studio() {
                                   e.stopPropagation();
                                   handleConnectPlatform("instagram", 2);
                                 }}
-                                className="inline-flex items-center justify-center gap-1 text-[11px] sm:text-xs font-bold px-2 sm:px-2.5 py-1 rounded-lg bg-primary/20 hover:bg-primary/30 text-purple-300 hover:text-white border border-primary/40 transition-all shadow-sm active:scale-95 cursor-pointer whitespace-nowrap"
+                                className="inline-flex items-center justify-center gap-1 text-xs font-bold px-3 py-1 rounded-lg bg-primary/20 hover:bg-primary/30 text-purple-300 hover:text-white border border-primary/40 transition-all shadow-sm active:scale-95 cursor-pointer"
                                 title="Conectar 2ª conta do Instagram"
                               >
                                 <Plus size={12} className="shrink-0" />
-                                <span>+ 2ª Conta</span>
+                                <span>2ª Conta</span>
                               </button>
                             </div>
                           </div>
@@ -1596,13 +1668,13 @@ export default function Studio() {
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleConnectPlatform("tiktok");
+                                  handleDisconnectPlatform("tiktok", undefined, "TikTok");
                                 }}
-                                className="inline-flex items-center justify-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-zinc-200 hover:text-white border border-white/10 transition-all shadow-sm active:scale-95 cursor-pointer"
-                                title="Reconectar conta do TikTok"
+                                className="inline-flex items-center justify-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg bg-zinc-800/90 hover:bg-destructive/20 text-zinc-300 hover:text-red-400 border border-white/10 hover:border-destructive/30 transition-all shadow-sm active:scale-95 cursor-pointer"
+                                title="Desconectar conta do TikTok"
                               >
-                                <RefreshCw size={11} className="shrink-0" />
-                                <span>Reconectar</span>
+                                <Unlink2 size={12} className="shrink-0" />
+                                <span>Desconectar</span>
                               </button>
                             </div>
                           </div>
@@ -1872,6 +1944,22 @@ export default function Studio() {
             <DialogDescription>Gerencie suas publicações, rascunhos e links publicados.</DialogDescription>
           </DialogHeader>
           <PostsView />
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Grande: Configurações e Integrações de Contas */}
+      <Dialog open={isSettingsModalOpen} onOpenChange={(open) => {
+        setIsSettingsModalOpen(open);
+        if (!open) {
+          refetchPlatforms();
+        }
+      }}>
+        <DialogContent className="max-w-4xl w-[94vw] max-h-[92vh] overflow-y-auto bg-card border-border/80 p-5 sm:p-7 rounded-3xl text-foreground">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Configurações e Integrações</DialogTitle>
+            <DialogDescription>Gerencie suas contas conectadas do Instagram, YouTube e TikTok.</DialogDescription>
+          </DialogHeader>
+          <SettingsView isModal={true} />
         </DialogContent>
       </Dialog>
 
