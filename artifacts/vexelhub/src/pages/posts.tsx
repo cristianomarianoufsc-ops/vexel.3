@@ -141,6 +141,23 @@ export default function Posts() {
     return () => window.clearInterval(interval);
   }, [publishingIds.size, refetch]);
 
+  // Sincroniza automaticamente métricas em segundo plano ao abrir o painel se houver posts sem métricas
+  useEffect(() => {
+    if (isLoading || posts.length === 0) return;
+    const hasUnsynced = posts.some(
+      (p) =>
+        p.status === "published" &&
+        p.platformResults?.some(
+          (pr) => pr.status === "success" && (pr.views === undefined || pr.views === null) && !pr.lastSyncAt
+        )
+    );
+    if (hasUnsynced && !isRefreshingAll) {
+      customFetch("/api/posts/refresh-metrics", { method: "POST" })
+        .then(() => refetch())
+        .catch(() => {});
+    }
+  }, [posts.length, isLoading]);
+
   const handleDelete = async (id: number) => {
     if (!confirm("Tem certeza que deseja excluir este post?")) return;
     try {

@@ -557,35 +557,41 @@ router.post("/posts/:id/refresh-metrics", requireAuth, async (req, res): Promise
   let updatedAny = false;
 
   for (const pr of results) {
-    if (pr.status !== "success" || !pr.postId) continue;
+    if (pr.status !== "success") continue;
+    const identifier = pr.postId || pr.postUrl;
+    if (!identifier) continue;
 
     try {
-      if (pr.platform === "youtube" && ytPlatform?.accessToken) {
-        const { accessToken } = await getUsableYouTubeAccessToken(ytPlatform as any);
-        const stats = await getYouTubeVideoMetrics(pr.postId, accessToken);
+      if (pr.platform === "youtube") {
+        let videoId = pr.postId;
+        if (!videoId && pr.postUrl) {
+          const m = pr.postUrl.match(/(?:shorts\/|v=)([A-Za-z0-9_-]+)/);
+          if (m) videoId = m[1];
+        }
+        if (videoId && ytPlatform?.accessToken) {
+          const { accessToken } = await getUsableYouTubeAccessToken(ytPlatform as any);
+          const stats = await getYouTubeVideoMetrics(videoId, accessToken);
+          pr.views = stats.views;
+          pr.likes = stats.likes;
+          pr.comments = stats.comments;
+          pr.lastSyncAt = new Date().toISOString();
+          updatedAny = true;
+        }
+      } else if (pr.platform === "instagram" || pr.platform === "instagram_2" || pr.platform.startsWith("instagram")) {
+        const igToken = (pr.platform === "instagram_2" ? igPlatforms[1]?.accessToken : igPlatforms[0]?.accessToken)
+          || igPlatforms.find((p) => p.isConnected && p.accessToken)?.accessToken;
+
+        const stats = await getInstagramMediaMetrics(identifier, igToken ?? undefined);
         pr.views = stats.views;
         pr.likes = stats.likes;
         pr.comments = stats.comments;
-        pr.lastSyncAt = new Date().toISOString();
-        updatedAny = true;
-      } else if (pr.platform === "instagram" && igPlatforms[0]?.accessToken) {
-        const stats = await getInstagramMediaMetrics(pr.postId, igPlatforms[0].accessToken);
-        pr.views = stats.views;
-        pr.likes = stats.likes;
-        pr.comments = stats.comments;
-        pr.shares = stats.shares;
-        pr.lastSyncAt = new Date().toISOString();
-        updatedAny = true;
-      } else if (pr.platform === "instagram_2" && igPlatforms[1]?.accessToken) {
-        const stats = await getInstagramMediaMetrics(pr.postId, igPlatforms[1].accessToken);
-        pr.views = stats.views;
-        pr.likes = stats.likes;
-        pr.comments = stats.comments;
-        pr.shares = stats.shares;
+        if (stats.shares > 0) {
+          pr.shares = stats.shares;
+        }
         pr.lastSyncAt = new Date().toISOString();
         updatedAny = true;
       } else if (pr.platform === "tiktok") {
-        const stats = await getTikTokVideoMetrics(pr.postId, ttPlatform?.accessToken ?? undefined);
+        const stats = await getTikTokVideoMetrics(identifier, ttPlatform?.accessToken ?? undefined);
         pr.views = stats.views;
         pr.likes = stats.likes;
         pr.comments = stats.comments;
@@ -594,7 +600,7 @@ router.post("/posts/:id/refresh-metrics", requireAuth, async (req, res): Promise
         updatedAny = true;
       }
     } catch (err: any) {
-      logger.warn({ event: "post.metrics.error", platform: pr.platform, postId: pr.postId, error: err?.message });
+      logger.warn({ event: "post.metrics.error", platform: pr.platform, identifier, error: err?.message });
     }
   }
 
@@ -637,35 +643,41 @@ router.post("/posts/refresh-metrics", requireAuth, async (req, res): Promise<voi
     let updatedAny = false;
 
     for (const pr of results) {
-      if (pr.status !== "success" || !pr.postId) continue;
+      if (pr.status !== "success") continue;
+      const identifier = pr.postId || pr.postUrl;
+      if (!identifier) continue;
 
       try {
-        if (pr.platform === "youtube" && ytPlatform?.accessToken) {
-          const { accessToken } = await getUsableYouTubeAccessToken(ytPlatform as any);
-          const stats = await getYouTubeVideoMetrics(pr.postId, accessToken);
+        if (pr.platform === "youtube") {
+          let videoId = pr.postId;
+          if (!videoId && pr.postUrl) {
+            const m = pr.postUrl.match(/(?:shorts\/|v=)([A-Za-z0-9_-]+)/);
+            if (m) videoId = m[1];
+          }
+          if (videoId && ytPlatform?.accessToken) {
+            const { accessToken } = await getUsableYouTubeAccessToken(ytPlatform as any);
+            const stats = await getYouTubeVideoMetrics(videoId, accessToken);
+            pr.views = stats.views;
+            pr.likes = stats.likes;
+            pr.comments = stats.comments;
+            pr.lastSyncAt = new Date().toISOString();
+            updatedAny = true;
+          }
+        } else if (pr.platform === "instagram" || pr.platform === "instagram_2" || pr.platform.startsWith("instagram")) {
+          const igToken = (pr.platform === "instagram_2" ? igPlatforms[1]?.accessToken : igPlatforms[0]?.accessToken)
+            || igPlatforms.find((p) => p.isConnected && p.accessToken)?.accessToken;
+
+          const stats = await getInstagramMediaMetrics(identifier, igToken ?? undefined);
           pr.views = stats.views;
           pr.likes = stats.likes;
           pr.comments = stats.comments;
-          pr.lastSyncAt = new Date().toISOString();
-          updatedAny = true;
-        } else if (pr.platform === "instagram" && igPlatforms[0]?.accessToken) {
-          const stats = await getInstagramMediaMetrics(pr.postId, igPlatforms[0].accessToken);
-          pr.views = stats.views;
-          pr.likes = stats.likes;
-          pr.comments = stats.comments;
-          pr.shares = stats.shares;
-          pr.lastSyncAt = new Date().toISOString();
-          updatedAny = true;
-        } else if (pr.platform === "instagram_2" && igPlatforms[1]?.accessToken) {
-          const stats = await getInstagramMediaMetrics(pr.postId, igPlatforms[1].accessToken);
-          pr.views = stats.views;
-          pr.likes = stats.likes;
-          pr.comments = stats.comments;
-          pr.shares = stats.shares;
+          if (stats.shares > 0) {
+            pr.shares = stats.shares;
+          }
           pr.lastSyncAt = new Date().toISOString();
           updatedAny = true;
         } else if (pr.platform === "tiktok") {
-          const stats = await getTikTokVideoMetrics(pr.postId, ttPlatform?.accessToken ?? undefined);
+          const stats = await getTikTokVideoMetrics(identifier, ttPlatform?.accessToken ?? undefined);
           pr.views = stats.views;
           pr.likes = stats.likes;
           pr.comments = stats.comments;
@@ -674,7 +686,7 @@ router.post("/posts/refresh-metrics", requireAuth, async (req, res): Promise<voi
           updatedAny = true;
         }
       } catch (err: any) {
-        logger.warn({ event: "posts.batch_metrics.error", platform: pr.platform, postId: pr.postId, error: err?.message });
+        logger.warn({ event: "posts.batch_metrics.error", platform: pr.platform, identifier, error: err?.message });
       }
     }
 
