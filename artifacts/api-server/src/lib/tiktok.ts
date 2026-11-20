@@ -544,3 +544,10 @@ export async function publishVideoToTikTok(options: {
     throw error;
   }
 }
+
+export async function getTikTokVideoMetrics(
+  postId: string,
+  accessToken?: string,
+): Promise<{ views: number; likes: number; comments: number; shares: number }> {
+  return { views: 0, likes: 0, comments: 0, shares: 0 };
+}

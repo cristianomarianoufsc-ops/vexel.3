@@ -756,7 +756,7 @@ export default function Studio() {
             className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm font-medium text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-all duration-200 text-left cursor-pointer group"
           >
             <ListVideo size={18} className="text-sidebar-foreground/60 group-hover:text-primary transition-colors" />
-            <span className="flex-1">Histórico</span>
+            <span className="flex-1">Histórico & Métricas</span>
           </button>
 
           {/* Calendário */}
@@ -856,7 +856,7 @@ export default function Studio() {
               type="button"
               onClick={() => setIsPostsModalOpen(true)}
               className="p-2 rounded-lg text-zinc-300 hover:text-white hover:bg-white/10 cursor-pointer"
-              title="Histórico"
+              title="Histórico & Métricas"
             >
               <ListVideo size={17} />
             </button>
@@ -1983,12 +1983,12 @@ export default function Studio() {
         </DialogContent>
       </Dialog>
 
-      {/* Modal Grande: Histórico de Publicações (Mostra todos os posts já publicados e ações) */}
+      {/* Modal Grande: Histórico & Métricas */}
       <Dialog open={isPostsModalOpen} onOpenChange={setIsPostsModalOpen}>
         <DialogContent className="max-w-5xl w-[94vw] max-h-[92vh] overflow-y-auto bg-card border-border/80 p-5 sm:p-7 rounded-3xl text-foreground">
           <DialogHeader className="sr-only">
-            <DialogTitle>Histórico de Publicações</DialogTitle>
-            <DialogDescription>Gerencie suas publicações, rascunhos e links publicados.</DialogDescription>
+            <DialogTitle>Histórico & Métricas</DialogTitle>
+            <DialogDescription>Acompanhe suas publicações e o desempenho em cada plataforma.</DialogDescription>
           </DialogHeader>
           <PostsView />
         </DialogContent>
@@ -2158,7 +2158,7 @@ export default function Studio() {
                 }}
                 className="flex-1 border-white/10 hover:bg-white/5 text-muted-foreground hover:text-white rounded-xl h-11"
               >
-                Ver Histórico
+                Ver Histórico & Métricas
               </Button>
             </div>
           </div>

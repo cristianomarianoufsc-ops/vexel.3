@@ -215,3 +215,34 @@ export async function uploadVideoToYouTube(options: {
     url: `https://www.youtube.com/watch?v=${finalData.id}`,
   };
 }
+
+export async function getYouTubeVideoMetrics(
+  videoId: string,
+  accessToken: string,
+): Promise<{ views: number; likes: number; comments: number }> {
+  const url = `https://www.googleapis.com/youtube/v3/videos?part=statistics&id=${encodeURIComponent(videoId)}`;
+  const res = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      Accept: "application/json",
+    },
+  });
+  if (!res.ok) {
+    throw new Error(`YouTube API retornou HTTP ${res.status}`);
+  }
+  const data = (await res.json()) as {
+    items?: Array<{
+      statistics?: {
+        viewCount?: string;
+        likeCount?: string;
+        commentCount?: string;
+      };
+    }>;
+  };
+  const stats = data.items?.[0]?.statistics;
+  return {
+    views: stats?.viewCount ? parseInt(stats.viewCount, 10) : 0,
+    likes: stats?.likeCount ? parseInt(stats.likeCount, 10) : 0,
+    comments: stats?.commentCount ? parseInt(stats.commentCount, 10) : 0,
+  };
+}

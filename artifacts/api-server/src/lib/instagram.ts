@@ -248,3 +248,51 @@ export async function uploadInstagramReel(options: {
   await options.onProgress?.(100, "Concluído");
   return result;
 }
+
+export async function getInstagramMediaMetrics(
+  mediaId: string,
+  accessToken: string,
+): Promise<{ views: number; likes: number; comments: number; shares: number }> {
+  let views = 0;
+  let likes = 0;
+  let comments = 0;
+  let shares = 0;
+
+  try {
+    const url = new URL(`https://graph.instagram.com/v26.0/${encodeURIComponent(mediaId)}`);
+    url.searchParams.set("fields", "like_count,comments_count");
+    url.searchParams.set("access_token", accessToken);
+    const res = await fetch(url);
+    if (res.ok) {
+      const data = (await res.json()) as { like_count?: number; comments_count?: number };
+      likes = data.like_count ?? 0;
+      comments = data.comments_count ?? 0;
+    }
+  } catch {
+    // continue
+  }
+
+  try {
+    const insightsUrl = new URL(`https://graph.instagram.com/v26.0/${encodeURIComponent(mediaId)}/insights`);
+    insightsUrl.searchParams.set("metric", "plays,reach,shares,total_interactions");
+    insightsUrl.searchParams.set("access_token", accessToken);
+    const res = await fetch(insightsUrl);
+    if (res.ok) {
+      const data = (await res.json()) as {
+        data?: Array<{ name: string; values?: Array<{ value: number }> }>;
+      };
+      if (Array.isArray(data.data)) {
+        for (const m of data.data) {
+          const val = m.values?.[0]?.value ?? 0;
+          if (m.name === "plays" || m.name === "views") views = val;
+          if (m.name === "shares") shares = val;
+          if (!views && m.name === "reach") views = val;
+        }
+      }
+    }
+  } catch {
+    // ignore
+  }
+
+  return { views, likes, comments, shares };
+}

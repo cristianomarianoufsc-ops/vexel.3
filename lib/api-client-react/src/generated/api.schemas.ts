@@ -75,6 +75,11 @@ export interface PlatformResult {
   postUrl?: string | null;
   /** @nullable */
   errorMessage?: string | null;
+  views?: number | null;
+  likes?: number | null;
+  comments?: number | null;
+  shares?: number | null;
+  lastSyncAt?: string | null;
 }
 
 export type PostStatus = typeof PostStatus[keyof typeof PostStatus];
