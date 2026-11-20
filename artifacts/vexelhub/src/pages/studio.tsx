@@ -718,151 +718,197 @@ export default function Studio() {
   };
 
   return (
-    <div className="min-h-[100dvh] bg-background text-foreground flex flex-col selection:bg-primary/30">
-      {/* Sleek Minimalist Studio Header */}
-      <header className="h-16 border-b border-border/40 bg-background/80 backdrop-blur-md px-4 sm:px-8 flex items-center justify-between sticky top-0 z-40">
-        <div className="flex items-center gap-3">
+    <div className="flex min-h-[100dvh] bg-background text-foreground selection:bg-primary/30">
+      {/* Barra Lateral estilo Modo Clássico (full-height, sticky) */}
+      <aside className="w-64 bg-sidebar border-r border-sidebar-border h-[100dvh] hidden lg:flex flex-col sticky top-0 shrink-0 select-none z-30">
+        {/* Top: Logo */}
+        <div className="h-16 flex items-center px-6 border-b border-sidebar-border">
           <Link href="/" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
             <img
               src={`${basePath}/vexelhub-logo.png`}
               alt="VexelHub"
-              className="h-7 w-auto max-w-[130px] object-contain"
+              className="h-8 w-auto max-w-[142px] object-contain"
             />
           </Link>
-          <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-xs font-semibold text-primary">
-            <Smartphone size={12} />
-            <span>Studio Oficial • 9:16</span>
-          </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        {/* Middle: Navigation Links */}
+        <nav className="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto">
+          {/* Active view indicator */}
+          <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold bg-primary text-white shadow-[0_0_20px_rgba(124,58,237,0.35)] mb-3">
+            <Smartphone size={18} />
+            <span className="flex-1">Studio 9:16</span>
+            <span className="text-[10px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-white/20 text-white">
+              Oficial
+            </span>
+          </div>
+
+          <div className="pt-1 pb-1 px-3">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
+              Ferramentas
+            </span>
+          </div>
+
+          {/* Histórico */}
+          <button
+            type="button"
+            onClick={() => setIsPostsModalOpen(true)}
+            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm font-medium text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-all duration-200 text-left cursor-pointer group"
+          >
+            <ListVideo size={18} className="text-sidebar-foreground/60 group-hover:text-primary transition-colors" />
+            <span className="flex-1">Histórico</span>
+          </button>
+
+          {/* Calendário */}
+          <button
+            type="button"
+            onClick={() => setIsCalendarViewModalOpen(true)}
+            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm font-medium text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-all duration-200 text-left cursor-pointer group"
+          >
+            <CalendarDays size={18} className="text-sidebar-foreground/60 group-hover:text-primary transition-colors" />
+            <span className="flex-1">Calendário</span>
+          </button>
+
+          {/* Configurações */}
+          <button
+            type="button"
+            onClick={() => setIsSettingsModalOpen(true)}
+            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm font-medium text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-all duration-200 text-left cursor-pointer group"
+          >
+            <SettingsIcon size={18} className="text-sidebar-foreground/60 group-hover:text-primary transition-colors" />
+            <span className="flex-1">Configurações</span>
+          </button>
+        </nav>
+
+        {/* Bottom: User Profile / Login */}
+        <div className="p-4 border-t border-sidebar-border">
           {isSignedIn ? (
             <>
-              <Link href="/classic">
-                <Button variant="ghost" size="sm" className="text-zinc-400 hover:text-white flex items-center gap-1.5 text-xs hover:bg-white/5 border border-white/10 rounded-xl" title="Acessar o painel avançado clássico (modo stand by)">
-                  <LayoutDashboard size={14} className="text-zinc-400" />
-                  <span className="hidden md:inline">Modo Clássico</span>
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500/30 text-amber-400/90 font-normal">stand by</Badge>
-                </Button>
-              </Link>
-              <div className="flex items-center gap-2 pl-2 border-l border-border/50">
-                <div className="w-8 h-8 rounded-full overflow-hidden bg-primary/20 border border-border">
+              <div className="flex items-center gap-3 mb-3 px-1">
+                <div className="w-10 h-10 rounded-full bg-sidebar-accent overflow-hidden border border-sidebar-border shrink-0">
                   {user?.imageUrl ? (
-                    <img src={user.imageUrl} alt="" className="w-full h-full object-cover" />
+                    <img src={user.imageUrl} alt={user.fullName || ""} className="w-full h-full object-cover" />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-xs font-bold text-primary">
+                    <div className="w-full h-full flex items-center justify-center text-xs font-bold text-muted-foreground">
                       {user?.firstName?.charAt(0) || "U"}
                     </div>
                   )}
                 </div>
-                <button
-                  onClick={() => signOut({ redirectUrl: basePath || "/" })}
-                  className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                  title="Sair"
-                >
-                  <LogOut size={16} />
-                </button>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-sidebar-foreground truncate">
+                    {user?.fullName || "Criador"}
+                  </p>
+                  <p className="text-xs text-sidebar-foreground/50 truncate">
+                    {user?.primaryEmailAddress?.emailAddress}
+                  </p>
+                </div>
               </div>
+              <button
+                onClick={() => signOut({ redirectUrl: basePath || "/" })}
+                className="flex items-center gap-2.5 w-full px-3 py-2 rounded-xl text-sm font-medium text-sidebar-foreground/70 hover:bg-destructive/10 hover:text-destructive transition-colors cursor-pointer"
+              >
+                <LogOut size={16} />
+                <span>Sair</span>
+              </button>
             </>
           ) : (
-            <div className="flex items-center gap-2">
+            <div className="space-y-2">
               <Button
                 variant="outline"
-                size="sm"
                 onClick={() => {
                   sessionStorage.setItem("vexel_studio_draft", JSON.stringify({ title, caption, selectedPlatforms }));
                   if (openSignIn) openSignIn();
                   else setLocation("/sign-in");
                 }}
-                className="text-xs sm:text-sm border-border hover:bg-white/5"
+                className="w-full text-xs font-semibold border-sidebar-border hover:bg-white/5 justify-center"
               >
                 Entrar
               </Button>
               <Button
-                size="sm"
                 onClick={() => {
                   sessionStorage.setItem("vexel_studio_draft", JSON.stringify({ title, caption, selectedPlatforms }));
                   if (openSignIn) openSignIn();
                   else setLocation("/sign-in");
                 }}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs sm:text-sm"
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-bold justify-center"
               >
                 1º Post Grátis
               </Button>
             </div>
           )}
         </div>
-      </header>
+      </aside>
 
-      {/* Main Studio Arena */}
-      <main className="flex-1 max-w-[1360px] w-full mx-auto px-4 pt-2 sm:pt-3 pb-8 sm:pb-12 lg:px-8 flex flex-col">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
-          
-          {/* COLUMN 1: Left Navigation Sidebar */}
-          <div className="lg:col-span-2 flex flex-col gap-2 py-1 lg:sticky lg:top-20 w-full mb-3 lg:mb-0">
-            <div className="bg-zinc-900/80 border border-white/10 rounded-2xl p-2.5 sm:p-3 shadow-xl backdrop-blur-md flex flex-row lg:flex-col items-stretch justify-between lg:justify-start gap-1.5 w-full overflow-x-auto">
-              <div className="hidden lg:flex items-center justify-between px-2 py-1 border-b border-white/5 mb-1 select-none">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
-                  Navegação
-                </span>
-                <span className="text-[9px] px-1.5 py-0.2 rounded bg-primary/20 text-primary border border-primary/30 font-bold">
-                  Studio
-                </span>
+      {/* Main Studio Arena Content */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
+        {/* Mobile Header (somente em telas menores que lg) */}
+        <header className="lg:hidden h-14 border-b border-border/40 bg-background/90 backdrop-blur-md px-4 flex items-center justify-between sticky top-0 z-40">
+          <Link href="/" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
+            <img
+              src={`${basePath}/vexelhub-logo.png`}
+              alt="VexelHub"
+              className="h-7 w-auto max-w-[120px] object-contain"
+            />
+          </Link>
+
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setIsPostsModalOpen(true)}
+              className="p-2 rounded-lg text-zinc-300 hover:text-white hover:bg-white/10 cursor-pointer"
+              title="Histórico"
+            >
+              <ListVideo size={17} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsCalendarViewModalOpen(true)}
+              className="p-2 rounded-lg text-zinc-300 hover:text-white hover:bg-white/10 cursor-pointer"
+              title="Calendário"
+            >
+              <CalendarDays size={17} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsSettingsModalOpen(true)}
+              className="p-2 rounded-lg text-zinc-300 hover:text-white hover:bg-white/10 cursor-pointer"
+              title="Configurações"
+            >
+              <SettingsIcon size={17} />
+            </button>
+
+            {isSignedIn ? (
+              <div className="w-7 h-7 rounded-full overflow-hidden bg-primary/20 border border-border ml-1">
+                {user?.imageUrl ? (
+                  <img src={user.imageUrl} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-[10px] font-bold text-primary">
+                    {user?.firstName?.charAt(0) || "U"}
+                  </div>
+                )}
               </div>
-
-              {/* Botão Ver Histórico */}
-              <button 
-                type="button"
-                onClick={() => setIsPostsModalOpen(true)}
-                className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs sm:text-[13px] font-medium text-zinc-300 hover:text-white hover:bg-white/10 transition-all text-left cursor-pointer group whitespace-nowrap"
+            ) : (
+              <Button
+                size="sm"
+                onClick={() => {
+                  sessionStorage.setItem("vexel_studio_draft", JSON.stringify({ title, caption, selectedPlatforms }));
+                  if (openSignIn) openSignIn();
+                  else setLocation("/sign-in");
+                }}
+                className="bg-primary hover:bg-primary/90 text-white text-xs px-2.5 h-8 ml-1"
               >
-                <ListVideo size={16} className="text-primary group-hover:scale-110 transition-transform shrink-0" />
-                <span>Histórico</span>
-              </button>
-
-              {/* Botão Calendário de Agendamento */}
-              <button
-                type="button"
-                onClick={() => setIsCalendarViewModalOpen(true)}
-                className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs sm:text-[13px] font-medium text-zinc-300 hover:text-white hover:bg-white/10 transition-all text-left cursor-pointer group whitespace-nowrap"
-              >
-                <CalendarDays size={16} className="text-primary group-hover:scale-110 transition-transform shrink-0" />
-                <span>Calendário</span>
-              </button>
-
-              {/* Botão Configurações (Abre tela dos apps configurados em modal) */}
-              <button
-                type="button"
-                onClick={() => setIsSettingsModalOpen(true)}
-                className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs sm:text-[13px] font-medium text-zinc-300 hover:text-white hover:bg-white/10 transition-all text-left cursor-pointer group whitespace-nowrap"
-              >
-                <SettingsIcon size={16} className="text-primary group-hover:scale-110 transition-transform shrink-0" />
-                <span>Configurações</span>
-              </button>
-
-              {/* Divisória no Desktop */}
-              <div className="hidden lg:block border-t border-white/5 my-1" />
-
-              {/* Link Modo Clássico */}
-              <Link
-                href="/classic"
-                className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-normal text-zinc-400 hover:text-zinc-200 hover:bg-white/5 transition-all text-left group whitespace-nowrap"
-                title="Acessar o painel clássico em stand by"
-              >
-                <div className="flex items-center gap-2">
-                  <LayoutDashboard size={15} className="text-zinc-500 group-hover:text-zinc-300 shrink-0" />
-                  <span className="hidden lg:inline">Modo Clássico</span>
-                  <span className="lg:hidden">Clássico</span>
-                </div>
-                <Badge variant="outline" className="hidden lg:inline-flex text-[9px] px-1.5 py-0 border-amber-500/30 text-amber-400/80 font-normal shrink-0 ml-1">
-                  stand by
-                </Badge>
-              </Link>
-            </div>
+                Entrar
+              </Button>
+            )}
           </div>
+        </header>
 
-          {/* COLUMN 2: The 9:16 Smartphone Mockup Preview */}
-          <div className="lg:col-span-4 flex flex-col items-center lg:sticky lg:top-16">
+        {/* Main Content Area */}
+        <main className="flex-1 max-w-[1280px] w-full mx-auto px-4 py-4 sm:py-6 lg:px-8 flex flex-col">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+            
+            {/* COLUMN 1: The 9:16 Smartphone Mockup Preview */}
+            <div className="lg:col-span-5 flex flex-col items-center lg:sticky lg:top-6">
             {/* Phone Device Bezel */}
             <div className="relative w-full max-w-[320px] sm:max-w-[335px] lg:w-auto lg:h-[min(510px,calc(100vh-140px))] aspect-[9/16] rounded-[38px] p-2.5 sm:p-3 bg-zinc-950/90 border border-white/10 shadow-[0_0_40px_rgba(124,58,237,0.22)] ring-1 ring-white/5 backdrop-blur-2xl flex flex-col transition-all">
               
@@ -1272,7 +1318,7 @@ export default function Studio() {
           </div>
 
           {/* RIGHT COLUMN: The Ultra-Focused Publisher Cockpit */}
-          <div className="lg:col-span-6 flex flex-col gap-6">
+          <div className="lg:col-span-7 flex flex-col gap-6">
             
             <div className="space-y-1 text-center lg:text-left">
               <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
@@ -1924,6 +1970,7 @@ export default function Studio() {
           </div>
         </div>
       </main>
+      </div>
 
       {/* Modal Grande: Agenda de Publicações (Mostra todos os cortes agendados do mês) */}
       <Dialog open={isCalendarViewModalOpen} onOpenChange={setIsCalendarViewModalOpen}>
