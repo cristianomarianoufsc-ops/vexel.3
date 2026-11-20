@@ -439,8 +439,8 @@ export default function Posts() {
                                       )}
                                     </div>
 
-                                    {/* Métricas: Views, Likes, Comentários */}
-                                    <div className="grid grid-cols-3 gap-1 py-1.5 text-center bg-black/40 rounded-lg border border-border/20">
+                                    {/* Métricas: Views, Likes, Comentários, Shares */}
+                                    <div className="grid grid-cols-4 gap-1 py-1.5 text-center bg-black/40 rounded-lg border border-border/20">
                                       <div className="flex flex-col items-center justify-center p-0.5">
                                         <div className="flex items-center gap-1 text-cyan-400 mb-0.5">
                                           <Eye size={11} />
@@ -461,7 +461,7 @@ export default function Posts() {
                                         <span className="text-[9px] uppercase tracking-wider text-muted-foreground">Likes</span>
                                       </div>
 
-                                      <div className="flex flex-col items-center justify-center p-0.5">
+                                      <div className="flex flex-col items-center justify-center p-0.5 border-r border-border/20">
                                         <div className="flex items-center gap-1 text-amber-400 mb-0.5">
                                           <MessageCircle size={11} />
                                         </div>
@@ -469,6 +469,16 @@ export default function Posts() {
                                           {formatCompactNumber(pr.comments)}
                                         </span>
                                         <span className="text-[9px] uppercase tracking-wider text-muted-foreground">Coment.</span>
+                                      </div>
+
+                                      <div className="flex flex-col items-center justify-center p-0.5">
+                                        <div className="flex items-center gap-1 text-green-400 mb-0.5">
+                                          <Send size={11} />
+                                        </div>
+                                        <span className="text-xs font-extrabold text-white">
+                                          {formatCompactNumber(pr.shares)}
+                                        </span>
+                                        <span className="text-[9px] uppercase tracking-wider text-muted-foreground">Shares</span>
                                       </div>
                                     </div>
 
