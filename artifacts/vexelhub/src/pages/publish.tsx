@@ -34,7 +34,33 @@ export default function Publish() {
   const createPost = useCreatePost();
   const publishPost = usePublishPost();
 
-  const connectedPlatforms = platforms.filter(p => p.isConnected);
+  const igAccounts = platforms.filter(p => p.platform === "instagram" && p.isConnected);
+  const connectedPlatforms = [
+    ...platforms.filter(p => p.platform === "youtube" && p.isConnected).map(p => ({
+      id: p.id,
+      key: "youtube",
+      label: "YouTube Shorts",
+      accountName: p.accountName,
+    })),
+    ...(igAccounts[0] ? [{
+      id: igAccounts[0].id,
+      key: "instagram",
+      label: `Instagram Reels (${igAccounts.length > 1 ? "Conta 1" : "Principal"})`,
+      accountName: igAccounts[0].accountName,
+    }] : []),
+    ...(igAccounts[1] ? [{
+      id: igAccounts[1].id,
+      key: "instagram_2",
+      label: "Instagram Reels (Conta 2)",
+      accountName: igAccounts[1].accountName,
+    }] : []),
+    ...platforms.filter(p => p.platform === "tiktok" && p.isConnected).map(p => ({
+      id: p.id,
+      key: "tiktok",
+      label: "TikTok",
+      accountName: p.accountName,
+    })),
+  ];
   const isFormValid = title.trim().length > 0 && selectedPlatforms.length > 0 && (objectPath !== null || file !== null);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -418,23 +444,23 @@ export default function Publish() {
                 ) : (
                   <div className="space-y-3">
                     {connectedPlatforms.map(p => (
-                      <div key={p.id} className={`flex items-center space-x-3 p-3 rounded-lg border ${selectedPlatforms.includes(p.platform) ? 'border-primary bg-primary/5' : 'border-border/50 bg-muted/20'} transition-colors`}>
+                      <div key={p.id} className={`flex items-center space-x-3 p-3 rounded-lg border ${selectedPlatforms.includes(p.key) ? 'border-primary bg-primary/5' : 'border-border/50 bg-muted/20'} transition-colors`}>
                         <Checkbox 
                           id={`platform-${p.id}`} 
-                          checked={selectedPlatforms.includes(p.platform)}
-                          onCheckedChange={() => togglePlatform(p.platform)}
+                          checked={selectedPlatforms.includes(p.key)}
+                          onCheckedChange={() => togglePlatform(p.key)}
                           disabled={isUploading}
                           className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                         />
                         <div className="grid gap-1.5 leading-none">
                           <label
                             htmlFor={`platform-${p.id}`}
-                            className="text-sm font-medium leading-none text-white capitalize cursor-pointer"
+                            className="text-sm font-medium leading-none text-white cursor-pointer"
                           >
-                            {p.platform}
+                            {p.label}
                           </label>
                           <p className="text-xs text-muted-foreground">
-                            {p.accountName || 'Conta conectada'}
+                            {p.accountName ? `@${p.accountName}` : 'Conta conectada'}
                           </p>
                         </div>
                       </div>

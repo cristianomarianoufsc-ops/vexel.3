@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { useListPlatforms, useConnectPlatform, useDisconnectPlatform } from "@workspace/api-client-react";
+import { useListPlatforms, customFetch } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Settings as SettingsIcon, Link2, Unlink2, ShieldCheck, AlertCircle, Smartphone, ArrowRight } from "lucide-react";
@@ -12,8 +12,7 @@ export default function Settings() {
   const [, setLocation] = useLocation();
   const [returnToStudio, setReturnToStudio] = useState(false);
   const { data: platforms = [], isLoading, refetch } = useListPlatforms();
-  const connectPlatform = useConnectPlatform();
-  const disconnectPlatform = useDisconnectPlatform();
+  const [connectingKey, setConnectingKey] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -22,21 +21,27 @@ export default function Settings() {
     }
   }, []);
 
-  const handleConnect = async (platformId: 'youtube' | 'instagram' | 'tiktok') => {
+  const handleConnect = async (platformId: 'youtube' | 'instagram' | 'tiktok', slot?: number) => {
+    const actionKey = slot ? `${platformId}_${slot}` : platformId;
+    setConnectingKey(actionKey);
     try {
-      const res = await connectPlatform.mutateAsync({ platform: platformId });
+      const url = slot ? `/api/platforms/${platformId}/connect?slot=${slot}` : `/api/platforms/${platformId}/connect`;
+      const res = await customFetch<{ url: string }>(url, { method: "POST" });
       if (res.url) {
         window.location.href = res.url;
       }
     } catch (e) {
       toast({ title: "Falha na conexão", description: "Não foi possível iniciar o fluxo OAuth", variant: "destructive" });
+      setConnectingKey(null);
     }
   };
 
-  const handleDisconnect = async (platformId: 'youtube' | 'instagram' | 'tiktok') => {
-    if (!confirm(`Tem certeza que deseja desconectar ${platformId}?`)) return;
+  const handleDisconnect = async (platformId: 'youtube' | 'instagram' | 'tiktok', slot?: number, accountLabel?: string) => {
+    const label = accountLabel || (slot ? `${platformId} (Conta ${slot})` : platformId);
+    if (!confirm(`Tem certeza que deseja desconectar ${label}?`)) return;
     try {
-      await disconnectPlatform.mutateAsync({ platform: platformId });
+      const url = slot ? `/api/platforms/${platformId}?slot=${slot}` : `/api/platforms/${platformId}`;
+      await customFetch(url, { method: "DELETE" });
       toast({ title: "Desconectado com sucesso" });
       refetch();
     } catch (e) {
@@ -44,17 +49,50 @@ export default function Settings() {
     }
   };
 
-  const platformIcons = {
-    youtube: <SiYoutube size={24} className="text-[#FF0000]" />,
-    instagram: <SiInstagram size={24} className="text-[#E1306C]" />,
-    tiktok: <SiTiktok size={24} className="text-white" />
-  };
+  const igAccounts = platforms.filter((p) => p.platform === "instagram");
+  const ig1 = igAccounts[0];
+  const ig2 = igAccounts[1];
+  const yt = platforms.find((p) => p.platform === "youtube");
+  const tt = platforms.find((p) => p.platform === "tiktok");
 
-  const platformNames = {
-    youtube: "YouTube Shorts",
-    instagram: "Instagram Reels",
-    tiktok: "TikTok"
-  };
+  const platformItems = [
+    {
+      key: "youtube",
+      name: "YouTube Shorts",
+      subtitle: "Canal do YouTube",
+      icon: <SiYoutube size={24} className="text-[#FF0000]" />,
+      platform: yt,
+      onConnect: () => handleConnect("youtube"),
+      onDisconnect: () => handleDisconnect("youtube", undefined, "YouTube Shorts"),
+    },
+    {
+      key: "instagram_1",
+      name: "Instagram Reels (Conta 1)",
+      subtitle: "Conta principal do Instagram",
+      icon: <SiInstagram size={24} className="text-[#E1306C]" />,
+      platform: ig1,
+      onConnect: () => handleConnect("instagram", 1),
+      onDisconnect: () => handleDisconnect("instagram", 1, `Instagram Conta 1 (${ig1?.accountName ? `@${ig1.accountName}` : ""})`),
+    },
+    {
+      key: "instagram_2",
+      name: "Instagram Reels (Conta 2)",
+      subtitle: "Segunda conta do Instagram",
+      icon: <SiInstagram size={24} className="text-[#E1306C]" />,
+      platform: ig2,
+      onConnect: () => handleConnect("instagram", 2),
+      onDisconnect: () => handleDisconnect("instagram", 2, `Instagram Conta 2 (${ig2?.accountName ? `@${ig2.accountName}` : ""})`),
+    },
+    {
+      key: "tiktok",
+      name: "TikTok",
+      subtitle: "Perfil do TikTok",
+      icon: <SiTiktok size={24} className="text-white" />,
+      platform: tt,
+      onConnect: () => handleConnect("tiktok"),
+      onDisconnect: () => handleDisconnect("tiktok", undefined, "TikTok"),
+    },
+  ];
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-3xl">
@@ -62,7 +100,7 @@ export default function Settings() {
         <h1 className="text-3xl font-extrabold tracking-tight text-white mb-1 flex items-center gap-3">
           <SettingsIcon className="text-primary" /> Configurações e Integrações
         </h1>
-        <p className="text-muted-foreground">Conecte as plataformas. Configure o hub.</p>
+        <p className="text-muted-foreground">Conecte até 2 contas do Instagram, YouTube e TikTok para publicação simultânea.</p>
       </div>
 
       {returnToStudio && (
@@ -97,12 +135,12 @@ export default function Settings() {
             <Link2 size={20} className="text-primary" /> Plataformas Conectadas
           </CardTitle>
           <CardDescription>
-            Autorize o VexelHub a publicar diretamente nessas contas.
+            Autorize o VexelHub a publicar diretamente nessas contas (suporte a até 2 contas no Instagram).
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {isLoading ? (
-            [...Array(3)].map((_, i) => (
+            [...Array(4)].map((_, i) => (
               <div key={i} className="flex items-center justify-between p-4 rounded-xl border border-border/50 bg-muted/20">
                 <div className="flex items-center gap-4">
                   <Skeleton className="w-10 h-10 rounded bg-border/50" />
@@ -115,43 +153,51 @@ export default function Settings() {
               </div>
             ))
           ) : (
-            ['youtube', 'instagram', 'tiktok'].map((pKey) => {
-              const platform = platforms.find(p => p.platform === pKey);
-              const isConnected = platform?.isConnected;
+            platformItems.map((item) => {
+              const isConnected = item.platform?.isConnected;
 
               return (
-                <div key={pKey} className={`flex items-center justify-between p-4 rounded-xl border ${isConnected ? 'border-primary/30 bg-primary/5' : 'border-border/50 bg-muted/20'} transition-all`}>
+                <div
+                  key={item.key}
+                  className={`flex items-center justify-between p-4 rounded-xl border ${
+                    isConnected ? "border-primary/30 bg-primary/5" : "border-border/50 bg-muted/20"
+                  } transition-all`}
+                >
                   <div className="flex items-center gap-4">
-                    <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${isConnected ? 'bg-background shadow-inner' : 'bg-background opacity-50 grayscale'}`}>
-                      {platformIcons[pKey as keyof typeof platformIcons]}
+                    <div
+                      className={`w-12 h-12 rounded-lg flex items-center justify-center ${
+                        isConnected ? "bg-background shadow-inner" : "bg-background opacity-50 grayscale"
+                      }`}
+                    >
+                      {item.icon}
                     </div>
                     <div>
-                      <h3 className="font-bold text-white text-lg">{platformNames[pKey as keyof typeof platformNames]}</h3>
+                      <h3 className="font-bold text-white text-lg">{item.name}</h3>
                       {isConnected ? (
                         <div className="flex items-center gap-1.5 text-sm text-green-400 font-medium">
-                          <ShieldCheck size={14} /> Conectado como {platform?.accountName || 'Autorizado'}
+                          <ShieldCheck size={14} /> Conectado como {item.platform?.accountName ? `@${item.platform.accountName}` : "Autorizado"}
                         </div>
                       ) : (
                         <div className="flex items-center gap-1.5 text-sm text-muted-foreground font-medium">
-                          <AlertCircle size={14} /> Não conectado
+                          <AlertCircle size={14} /> {item.subtitle} (Não conectado)
                         </div>
                       )}
                     </div>
                   </div>
                   <div>
                     {isConnected ? (
-                      <Button 
-                        variant="outline" 
-                        onClick={() => handleDisconnect(pKey as any)}
+                      <Button
+                        variant="outline"
+                        onClick={item.onDisconnect}
                         className="border-border text-muted-foreground hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
                       >
                         <Unlink2 size={16} className="mr-2" /> Desconectar
                       </Button>
                     ) : (
-                      <Button 
-                        onClick={() => handleConnect(pKey as any)}
+                      <Button
+                        onClick={item.onConnect}
                         className="bg-white text-black hover:bg-white/90 font-bold"
-                        disabled={connectPlatform.isPending}
+                        disabled={connectingKey === item.key}
                       >
                         <Link2 size={16} className="mr-2" /> Conectar
                       </Button>

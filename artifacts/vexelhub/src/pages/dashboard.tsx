@@ -147,13 +147,13 @@ export default function Dashboard() {
               <Card className="bg-card border-border/50">
                 <CardContent className="p-5 space-y-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground font-medium">Plataformas Conectadas</span>
-                    <span className="text-xl font-bold text-white">{stats.connectedPlatforms}/3</span>
+                    <span className="text-muted-foreground font-medium">Contas Conectadas</span>
+                    <span className="text-xl font-bold text-white">{stats.connectedPlatforms}/4</span>
                   </div>
                   <div className="w-full bg-muted rounded-full h-2">
                     <div 
                       className="bg-primary h-2 rounded-full shadow-[0_0_10px_rgba(124,58,237,0.5)]" 
-                      style={{ width: `${(stats.connectedPlatforms / 3) * 100}%` }}
+                      style={{ width: `${Math.min(100, (stats.connectedPlatforms / 4) * 100)}%` }}
                     />
                   </div>
                   <div className="pt-4 mt-4 border-t border-border/50">

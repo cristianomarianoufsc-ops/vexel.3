@@ -200,8 +200,13 @@ export async function runPublishJob(options: { id: number; userId: string }): Pr
   const connectedPlatforms = await db
     .select()
     .from(platformsTable)
-    .where(eq(platformsTable.userId, userId));
-  const platformMap = new Map(connectedPlatforms.map((p) => [p.platform, p]));
+    .where(eq(platformsTable.userId, userId))
+    .orderBy(platformsTable.id);
+
+  const igAccounts = connectedPlatforms.filter((p) => p.platform === "instagram");
+  const ig1 = igAccounts[0];
+  const ig2 = igAccounts[1];
+
   const results: PublishPlatformResult[] = platforms.map((platform) => ({
     platform,
     status: "pending",
@@ -240,15 +245,37 @@ export async function runPublishJob(options: { id: number; userId: string }): Pr
 
   try {
     for (const [index, platform] of platforms.entries()) {
-      const connection = platformMap.get(platform);
+      let connection: typeof platformsTable.$inferSelect | undefined;
+      let isInstagram = false;
+
+      if (platform === "youtube") {
+        connection = connectedPlatforms.find((p) => p.platform === "youtube");
+      } else if (platform === "tiktok") {
+        connection = connectedPlatforms.find((p) => p.platform === "tiktok");
+      } else if (platform === "instagram" || platform === "instagram_1") {
+        connection = ig1;
+        isInstagram = true;
+      } else if (platform === "instagram_2") {
+        connection = ig2;
+        isInstagram = true;
+      } else if (platform.startsWith("instagram:")) {
+        const targetId = Number(platform.split(":")[1]);
+        connection = connectedPlatforms.find((p) => p.id === targetId);
+        isInstagram = true;
+      }
 
       if (!connection || !connection.isConnected) {
+        const platformLabel = platform === "instagram_2"
+          ? "Instagram (Conta 2)"
+          : platform === "instagram"
+          ? "Instagram"
+          : platform;
         results[index] = {
           ...results[index],
           status: "failed",
           progress: 100,
           stage: "Falhou",
-          errorMessage: `${platform} não está conectado. Conecte-o em Configurações antes de publicar.`,
+          errorMessage: `${platformLabel} não está conectado. Conecte-o em Configurações antes de publicar.`,
         };
         await saveProgress();
         continue;
@@ -295,9 +322,9 @@ export async function runPublishJob(options: { id: number; userId: string }): Pr
             errorMessage: null,
           };
           await saveProgress();
-        } else if (platform === "instagram") {
+        } else if (isInstagram) {
           if (!connection.accessToken || !connection.accountId) {
-            throw new Error("A conexão do Instagram não possui token ou ID de conta.");
+            throw new Error(`A conexão do Instagram (${connection.accountName ? `@${connection.accountName}` : platform}) não possui token ou ID de conta.`);
           }
           const videoUrl = await getPublicUrl(post.videoObjectPath);
           if (

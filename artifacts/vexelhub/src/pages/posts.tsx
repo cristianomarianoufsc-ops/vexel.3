@@ -279,9 +279,9 @@ export default function Posts() {
                                 pr.status === "failed" ? "border-destructive/30 bg-destructive/10 text-destructive" :
                                 "border-border bg-muted text-muted-foreground"
                               }`}
-                              title={`${pr.platform}: ${pr.status} ${pr.errorMessage ? `- ${pr.errorMessage}` : ''}`}
+                              title={`${pr.platform === "instagram_2" ? "Instagram (Conta 2)" : pr.platform === "instagram" ? "Instagram (Conta 1)" : pr.platform}: ${pr.status} ${pr.errorMessage ? `- ${pr.errorMessage}` : ''}`}
                             >
-                              <span className="text-[10px] font-bold uppercase">{pr.platform.substring(0, 2)}</span>
+                              <span className="text-[10px] font-bold uppercase">{pr.platform === "instagram_2" ? "I2" : pr.platform.substring(0, 2)}</span>
                               {pr.status === "failed" && <AlertCircle size={10} className="mt-0.5" />}
                             </div>
                             {pr.status === "failed" && pr.errorMessage && (

@@ -7,7 +7,8 @@ import {
   useRequestUploadUrl, 
   useCreatePost, 
   usePublishPost,
-  getPost 
+  getPost,
+  customFetch
 } from "@workspace/api-client-react";
 import type { PlatformResult } from "@workspace/api-zod";
 import { 
@@ -186,11 +187,21 @@ export default function Studio() {
     }
   }, [toast]);
 
-  // Sincroniza automaticamente a seleção inicial apenas com plataformas CONECTADAS
+  // Sincroniza automaticamente a seleção inicial apenas com plataformas CONECTADAS (incluindo até 2 contas do Instagram)
   useEffect(() => {
     if (platforms && platforms.length > 0 && !platformsInitializedRef.current) {
-      const connectedPlatforms = platforms.filter((p) => p.isConnected).map((p) => p.platform);
-      setSelectedPlatforms(connectedPlatforms);
+      const defaultSelected: string[] = [];
+      const yt = platforms.find((p) => p.platform === "youtube");
+      if (yt?.isConnected) defaultSelected.push("youtube");
+
+      const tt = platforms.find((p) => p.platform === "tiktok");
+      if (tt?.isConnected) defaultSelected.push("tiktok");
+
+      const igAccounts = platforms.filter((p) => p.platform === "instagram");
+      if (igAccounts[0]?.isConnected) defaultSelected.push("instagram");
+      if (igAccounts[1]?.isConnected) defaultSelected.push("instagram_2");
+
+      setSelectedPlatforms(defaultSelected);
       platformsInitializedRef.current = true;
     }
   }, [platforms]);
@@ -329,11 +340,24 @@ export default function Studio() {
   };
 
   const togglePlatform = (p: string) => {
-    const pl = platforms.find((item) => item.platform === p);
-    if (!pl?.isConnected) {
-      // Se a conta não está conectada, garante que não fica selecionada e abre o fluxo de conexão
+    const igAccounts = platforms.filter((item) => item.platform === "instagram");
+    let isConnected = false;
+    if (p === "instagram") {
+      isConnected = !!igAccounts[0]?.isConnected;
+    } else if (p === "instagram_2") {
+      isConnected = !!igAccounts[1]?.isConnected;
+    } else {
+      const pl = platforms.find((item) => item.platform === p);
+      isConnected = !!pl?.isConnected;
+    }
+
+    if (!isConnected) {
       setSelectedPlatforms((prev) => prev.filter((item) => item !== p));
-      handleConnectPlatform(p as "youtube" | "instagram" | "tiktok");
+      if (p === "instagram_2") {
+        handleConnectPlatform("instagram", 2);
+      } else {
+        handleConnectPlatform(p as "youtube" | "instagram" | "tiktok", 1);
+      }
       return;
     }
 
@@ -342,7 +366,7 @@ export default function Studio() {
     );
   };
 
-  const handleConnectPlatform = async (platformId: "youtube" | "instagram" | "tiktok") => {
+  const handleConnectPlatform = async (platformId: "youtube" | "instagram" | "tiktok", slot?: number) => {
     if (!isSignedIn) {
       // Save draft and open sign in
       sessionStorage.setItem("vexel_studio_draft", JSON.stringify({ title, caption, selectedPlatforms }));
@@ -358,7 +382,8 @@ export default function Studio() {
     try {
       sessionStorage.setItem("vexel_studio_draft", JSON.stringify({ title, caption, selectedPlatforms }));
       sessionStorage.setItem("vexel_oauth_return_to", "/studio");
-      const res = await connectPlatform.mutateAsync({ platform: platformId });
+      const url = slot ? `/api/platforms/${platformId}/connect?slot=${slot}` : `/api/platforms/${platformId}/connect`;
+      const res = await customFetch<{ url: string }>(url, { method: "POST" });
       if (res.url) {
         window.location.href = res.url;
       }
@@ -465,7 +490,10 @@ export default function Studio() {
     }
 
     // Check if selected platforms are connected
+    const igAccounts = platforms.filter((item) => item.platform === "instagram");
     const unconnected = selectedPlatforms.filter((p) => {
+      if (p === "instagram") return !igAccounts[0]?.isConnected;
+      if (p === "instagram_2") return !igAccounts[1]?.isConnected;
       const pl = platforms.find((item) => item.platform === p);
       return !pl?.isConnected;
     });
@@ -1251,7 +1279,13 @@ export default function Studio() {
                   Publicar em: <span className="text-xs font-normal text-muted-foreground">(O Trio de Ouro)</span>
                 </label>
                 {(() => {
-                  const connectedIds = platforms.filter((p) => p.isConnected).map((p) => p.platform);
+                  const igAccounts = platforms.filter((p) => p.platform === "instagram");
+                  const connectedIds: string[] = [];
+                  if (platforms.find((p) => p.platform === "youtube")?.isConnected) connectedIds.push("youtube");
+                  if (igAccounts[0]?.isConnected) connectedIds.push("instagram");
+                  if (igAccounts[1]?.isConnected) connectedIds.push("instagram_2");
+                  if (platforms.find((p) => p.platform === "tiktok")?.isConnected) connectedIds.push("tiktok");
+
                   const isAllConnectedSelected =
                     connectedIds.length > 0 && connectedIds.every((id) => selectedPlatforms.includes(id));
 
@@ -1346,31 +1380,104 @@ export default function Studio() {
                   );
                 })()}
 
-                {/* 2. Instagram Reels */}
+                {/* 2. Instagram Reels (suporte a até 2 contas) */}
                 {(() => {
-                  const ig = platforms.find((p) => p.platform === "instagram");
-                  const isConnected = ig?.isConnected;
-                  const isSelected = selectedPlatforms.includes("instagram");
+                  const igAccounts = platforms.filter((p) => p.platform === "instagram");
+                  const ig1 = igAccounts[0];
+                  const ig2 = igAccounts[1];
+                  const isConnected1 = !!ig1?.isConnected;
+                  const isConnected2 = !!ig2?.isConnected;
+                  const isSelected1 = selectedPlatforms.includes("instagram");
+                  const isSelected2 = selectedPlatforms.includes("instagram_2");
+                  const isAnySelected = (isConnected1 && isSelected1) || (isConnected2 && isSelected2);
 
+                  // Quando ambas as 2 contas estão conectadas
+                  if (isConnected1 && isConnected2) {
+                    return (
+                      <div
+                        className={`relative p-2 sm:p-2.5 rounded-2xl border transition-all flex flex-col justify-between min-h-[96px] sm:min-h-[110px] select-none ${
+                          isAnySelected
+                            ? "bg-primary/10 border-primary/60 shadow-[0_0_15px_rgba(124,58,237,0.2)]"
+                            : "bg-card border-border/50 hover:border-border"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between w-full mb-1">
+                          <div className="w-5 h-5 rounded-md bg-[#E1306C]/15 flex items-center justify-center text-[#E1306C]">
+                            <SiInstagram size={12} />
+                          </div>
+                          <span className="text-[10px] font-bold text-white uppercase tracking-wider">
+                            Reels (2 contas)
+                          </span>
+                          <span className="w-2" />
+                        </div>
+
+                        <div className="flex flex-col gap-1 w-full my-auto">
+                          {/* Conta 1 */}
+                          <div
+                            onClick={() => togglePlatform("instagram")}
+                            className={`flex items-center justify-between px-1.5 py-1 rounded-md border text-left cursor-pointer transition-colors ${
+                              isSelected1
+                                ? "bg-primary/25 border-primary text-white"
+                                : "bg-muted/30 border-border/40 text-muted-foreground hover:text-white"
+                            }`}
+                          >
+                            <span className="text-[10px] font-medium truncate max-w-[70px] sm:max-w-[90px]">
+                              @{ig1.accountName || "Conta 1"}
+                            </span>
+                            <div
+                              className={`w-3 h-3 rounded flex items-center justify-center border ${
+                                isSelected1 ? "bg-primary border-primary text-white" : "border-border/60"
+                              }`}
+                            >
+                              {isSelected1 && <Check size={8} strokeWidth={3} />}
+                            </div>
+                          </div>
+
+                          {/* Conta 2 */}
+                          <div
+                            onClick={() => togglePlatform("instagram_2")}
+                            className={`flex items-center justify-between px-1.5 py-1 rounded-md border text-left cursor-pointer transition-colors ${
+                              isSelected2
+                                ? "bg-primary/25 border-primary text-white"
+                                : "bg-muted/30 border-border/40 text-muted-foreground hover:text-white"
+                            }`}
+                          >
+                            <span className="text-[10px] font-medium truncate max-w-[70px] sm:max-w-[90px]">
+                              @{ig2.accountName || "Conta 2"}
+                            </span>
+                            <div
+                              className={`w-3 h-3 rounded flex items-center justify-center border ${
+                                isSelected2 ? "bg-primary border-primary text-white" : "border-border/60"
+                              }`}
+                            >
+                              {isSelected2 && <Check size={8} strokeWidth={3} />}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  // Apenas 1 conta conectada (ou nenhuma)
                   return (
                     <div
                       onClick={() => togglePlatform("instagram")}
                       className={`relative p-2.5 sm:p-3.5 rounded-2xl border transition-all cursor-pointer flex flex-col items-center justify-between text-center min-h-[96px] sm:min-h-[110px] select-none ${
-                        isSelected && isConnected
+                        isSelected1 && isConnected1
                           ? "bg-primary/10 border-primary/60 shadow-[0_0_15px_rgba(124,58,237,0.2)]"
-                          : isConnected
+                          : isConnected1
                           ? "bg-card border-border/50 hover:border-border"
                           : "bg-muted/10 border-border/30 opacity-75"
                       }`}
                     >
                       {/* Check badge in top-right */}
-                      {isConnected && (
+                      {isConnected1 && (
                         <div
                           className={`absolute top-2 right-2 w-4 h-4 sm:w-5 sm:h-5 rounded-md border flex items-center justify-center transition-colors ${
-                            isSelected ? "bg-primary border-primary text-white" : "border-border/70 bg-card/80"
+                            isSelected1 ? "bg-primary border-primary text-white" : "border-border/70 bg-card/80"
                           }`}
                         >
-                          {isSelected && <Check size={11} strokeWidth={3} />}
+                          {isSelected1 && <Check size={11} strokeWidth={3} />}
                         </div>
                       )}
 
@@ -1383,30 +1490,44 @@ export default function Studio() {
                           <span className="sm:hidden">Reels</span>
                           <span className="hidden sm:inline">Instagram Reels</span>
                         </p>
-                        {isConnected ? (
+                        {isConnected1 ? (
                           <div className="flex flex-col items-center">
                             <p className="text-[10px] sm:text-[11px] text-green-400 font-medium truncate flex items-center justify-center gap-1 mt-0.5 max-w-full">
                               <span className="w-1.5 h-1.5 rounded-full bg-green-400 shrink-0" />
-                              <span className="truncate">{ig?.accountName ? `@${ig.accountName}` : "Conectado"}</span>
+                              <span className="truncate">{ig1?.accountName ? `@${ig1.accountName}` : "Conectado"}</span>
                             </p>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleConnectPlatform("instagram");
-                              }}
-                              className="text-[9px] text-muted-foreground hover:text-white underline mt-0.5"
-                              title="Reconectar conta do Instagram"
-                            >
-                              reconectar
-                            </button>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleConnectPlatform("instagram", 1);
+                                }}
+                                className="text-[9px] text-muted-foreground hover:text-white underline"
+                                title="Reconectar conta do Instagram"
+                              >
+                                reconectar
+                              </button>
+                              <span className="text-[9px] text-zinc-600">•</span>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleConnectPlatform("instagram", 2);
+                                }}
+                                className="text-[9px] text-primary hover:text-primary/80 font-bold"
+                                title="Conectar 2ª conta do Instagram"
+                              >
+                                + 2ª conta
+                              </button>
+                            </div>
                           </div>
                         ) : (
                           <button
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleConnectPlatform("instagram");
+                              handleConnectPlatform("instagram", 1);
                             }}
                             className="text-[10px] sm:text-[11px] text-primary hover:underline font-semibold mt-0.5 block w-full truncate"
                           >
@@ -1776,10 +1897,16 @@ export default function Studio() {
                   >
                     <div className="flex items-center gap-2.5">
                       {plat === "youtube" && <SiYoutube className="text-[#FF0000]" size={18} />}
-                      {plat === "instagram" && <SiInstagram className="text-[#E1306C]" size={18} />}
+                      {plat.startsWith("instagram") && <SiInstagram className="text-[#E1306C]" size={18} />}
                       {plat === "tiktok" && <SiTiktok className="text-white" size={16} />}
                       <span className="text-sm font-semibold capitalize text-white">
-                        {plat === "youtube" ? "YouTube Shorts" : plat === "instagram" ? "Instagram Reels" : "TikTok"}
+                        {plat === "youtube"
+                          ? "YouTube Shorts"
+                          : plat === "instagram_2"
+                          ? "Instagram Reels (Conta 2)"
+                          : plat === "instagram"
+                          ? "Instagram Reels (Conta 1)"
+                          : "TikTok"}
                       </span>
                     </div>
 
@@ -1835,9 +1962,15 @@ export default function Studio() {
                 <div key={r.platform} className="flex items-center justify-between text-xs py-1">
                   <div className="flex items-center gap-2">
                     {r.platform === "youtube" && <SiYoutube className="text-[#FF0000]" size={14} />}
-                    {r.platform === "instagram" && <SiInstagram className="text-[#E1306C]" size={14} />}
+                    {r.platform.startsWith("instagram") && <SiInstagram className="text-[#E1306C]" size={14} />}
                     {r.platform === "tiktok" && <SiTiktok className="text-white" size={13} />}
-                    <span className="capitalize font-medium text-white">{r.platform}</span>
+                    <span className="capitalize font-medium text-white">
+                      {r.platform === "instagram_2"
+                        ? "Instagram (Conta 2)"
+                        : r.platform === "instagram"
+                        ? "Instagram (Conta 1)"
+                        : r.platform}
+                    </span>
                   </div>
                   {r.postUrl ? (
                     <a

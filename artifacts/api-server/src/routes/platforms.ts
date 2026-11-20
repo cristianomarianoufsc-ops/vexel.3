@@ -26,12 +26,12 @@ const TIKTOK_SCOPES = process.env.TIKTOK_SCOPES?.trim() || "video.publish,video.
 
 const router: IRouter = Router();
 
-const SUPPORTED_PLATFORMS = ["youtube", "instagram", "tiktok"] as const;
+const SUPPORTED_PLATFORMS = ["youtube", "instagram", "instagram_2", "tiktok"] as const;
 type PlatformName = (typeof SUPPORTED_PLATFORMS)[number];
 
-// Ensure platform rows exist for user
+// Ensure platform rows exist for user (including up to 2 accounts for Instagram)
 async function ensurePlatformRows(userId: string) {
-  for (const platform of SUPPORTED_PLATFORMS) {
+  for (const platform of ["youtube", "tiktok"]) {
     const existing = await db
       .select()
       .from(platformsTable)
@@ -46,6 +46,22 @@ async function ensurePlatformRows(userId: string) {
       });
     }
   }
+
+  // Ensure 2 slots exist for Instagram
+  const existingIg = await db
+    .select()
+    .from(platformsTable)
+    .where(and(eq(platformsTable.userId, userId), eq(platformsTable.platform, "instagram")))
+    .orderBy(platformsTable.id);
+
+  const missingIgCount = 2 - existingIg.length;
+  for (let i = 0; i < missingIgCount; i++) {
+    await db.insert(platformsTable).values({
+      userId,
+      platform: "instagram",
+      isConnected: false,
+    });
+  }
 }
 
 router.get("/platforms", requireAuth, async (req, res): Promise<void> => {
@@ -54,7 +70,8 @@ router.get("/platforms", requireAuth, async (req, res): Promise<void> => {
   const platforms = await db
     .select()
     .from(platformsTable)
-    .where(eq(platformsTable.userId, req.userId));
+    .where(eq(platformsTable.userId, req.userId))
+    .orderBy(platformsTable.id);
 
   res.json(
     platforms.map((p) => ({
@@ -68,9 +85,15 @@ router.get("/platforms", requireAuth, async (req, res): Promise<void> => {
 });
 
 router.post("/platforms/:platform/connect", requireAuth, async (req, res): Promise<void> => {
-  const platform = Array.isArray(req.params.platform) ? req.params.platform[0] : req.params.platform;
+  const platformParam = Array.isArray(req.params.platform) ? req.params.platform[0] : req.params.platform;
+  let platform = platformParam;
+  let slot = req.query.slot ? Number(req.query.slot) : req.body?.slot ? Number(req.body.slot) : 1;
+  if (platform === "instagram_2") {
+    platform = "instagram";
+    slot = 2;
+  }
 
-  if (!SUPPORTED_PLATFORMS.includes(platform as PlatformName)) {
+  if (!["youtube", "instagram", "tiktok"].includes(platform)) {
     res.status(400).json({ error: "Unsupported platform" });
     return;
   }
@@ -89,7 +112,8 @@ router.post("/platforms/:platform/connect", requireAuth, async (req, res): Promi
     const clientId = process.env.INSTAGRAM_CLIENT_ID || process.env.INSTAGRAM_APP_ID || "";
     const redirectUri = `${baseUrl}/api/platforms/instagram/callback`;
     const scope = "instagram_business_basic,instagram_business_content_publish";
-    url = `https://www.instagram.com/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scope)}&response_type=code&state=${encodeURIComponent(req.userId)}`;
+    const state = `${req.userId}:instagram:${slot}`;
+    url = `https://www.instagram.com/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scope)}&response_type=code&state=${encodeURIComponent(state)}`;
   } else if (platform === "tiktok") {
     const clientKey = process.env.TIKTOK_CLIENT_KEY || "";
     if (clientKey) {
@@ -114,13 +138,23 @@ router.post("/platforms/:platform/connect", requireAuth, async (req, res): Promi
 
 router.get("/platforms/instagram/callback", async (req, res): Promise<void> => {
   const code = req.query.code as string | undefined;
-  const state = req.query.state as string | undefined;
+  const rawState = req.query.state as string | undefined;
   const error = req.query.error as string | undefined;
   const redirectUri = `${getPublicApiUrl()}/api/platforms/instagram/callback`;
 
-  if (error || !code || !state) {
+  if (error || !code || !rawState) {
     res.status(400).send(`Falha na autorização do Instagram: ${error || "code/state ausente"}`);
     return;
+  }
+
+  let userId = rawState;
+  let slot = 1;
+  if (rawState.includes(":")) {
+    const parts = rawState.split(":");
+    userId = parts[0];
+    if (parts[2] === "2" || parts[1] === "instagram_2") {
+      slot = 2;
+    }
   }
 
   try {
@@ -130,6 +164,39 @@ router.get("/platforms/instagram/callback", async (req, res): Promise<void> => {
     });
     const token = await getLongLivedInstagramToken(shortLived.accessToken);
     const profile = await getInstagramProfile(token.accessToken);
+
+    await ensurePlatformRows(userId);
+
+    const existingRows = await db
+      .select()
+      .from(platformsTable)
+      .where(and(eq(platformsTable.userId, userId), eq(platformsTable.platform, "instagram")))
+      .orderBy(platformsTable.id);
+
+    // Check if the user already has this specific account connected in any slot
+    const sameAccountRow = existingRows.find((r) => r.accountId === profile.accountId);
+    let targetRowId: number;
+
+    if (sameAccountRow) {
+      targetRowId = sameAccountRow.id;
+    } else if (slot === 2 && existingRows[1]) {
+      targetRowId = existingRows[1].id;
+    } else if (slot === 1 && existingRows[0]) {
+      targetRowId = existingRows[0].id;
+    } else if (existingRows.length > 0) {
+      const disconnectedRow = existingRows.find((r) => !r.isConnected);
+      targetRowId = (disconnectedRow || existingRows[0]).id;
+    } else {
+      const [newRow] = await db
+        .insert(platformsTable)
+        .values({
+          userId,
+          platform: "instagram",
+          isConnected: false,
+        })
+        .returning();
+      targetRowId = newRow.id;
+    }
 
     await db
       .update(platformsTable)
@@ -142,11 +209,9 @@ router.get("/platforms/instagram/callback", async (req, res): Promise<void> => {
         tokenExpiresAt: new Date(Date.now() + token.expiresIn * 1000),
         updatedAt: new Date(),
       })
-      .where(and(eq(platformsTable.userId, state), eq(platformsTable.platform, "instagram")));
+      .where(eq(platformsTable.id, targetRowId));
 
-    const frontendUrl = process.env.PUBLIC_FRONTEND_URL
-      ? `${process.env.PUBLIC_FRONTEND_URL.replace(/\/+$/, "")}/settings`
-      : "https://vexel-2.vercel.app/settings";
+    const frontendUrl = getFrontendSettingsUrl();
     res.redirect(frontendUrl);
   } catch (err) {
     console.error("Instagram callback error:", err);
@@ -286,27 +351,69 @@ router.get("/platforms/youtube/callback", async (req, res): Promise<void> => {
 });
 
 router.delete("/platforms/:platform", requireAuth, async (req, res): Promise<void> => {
-  const platform = Array.isArray(req.params.platform) ? req.params.platform[0] : req.params.platform;
+  const platformParam = Array.isArray(req.params.platform) ? req.params.platform[0] : req.params.platform;
+  let platform = platformParam;
+  let slot = req.query.slot ? Number(req.query.slot) : undefined;
+  const id = req.query.id ? Number(req.query.id) : undefined;
 
-  if (!SUPPORTED_PLATFORMS.includes(platform as PlatformName)) {
+  if (platform === "instagram_2") {
+    platform = "instagram";
+    slot = 2;
+  }
+
+  if (!["youtube", "instagram", "tiktok"].includes(platform)) {
     res.status(400).json({ error: "Unsupported platform" });
     return;
   }
 
-  await db
-    .update(platformsTable)
-    .set({
-      isConnected: false,
-      accountName: null,
-      accountId: null,
-      accessToken: null,
-      refreshToken: null,
-      tokenExpiresAt: null,
-      updatedAt: new Date(),
-    })
-    .where(
-      and(eq(platformsTable.userId, req.userId), eq(platformsTable.platform, platform)),
-    );
+  if (platform === "instagram") {
+    const existingRows = await db
+      .select()
+      .from(platformsTable)
+      .where(and(eq(platformsTable.userId, req.userId), eq(platformsTable.platform, "instagram")))
+      .orderBy(platformsTable.id);
+
+    let targetId: number | undefined;
+    if (id) {
+      targetId = id;
+    } else if (slot === 2 && existingRows[1]) {
+      targetId = existingRows[1].id;
+    } else if (slot === 1 && existingRows[0]) {
+      targetId = existingRows[0].id;
+    } else if (existingRows[0]) {
+      targetId = existingRows[0].id;
+    }
+
+    if (targetId) {
+      await db
+        .update(platformsTable)
+        .set({
+          isConnected: false,
+          accountName: null,
+          accountId: null,
+          accessToken: null,
+          refreshToken: null,
+          tokenExpiresAt: null,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(platformsTable.id, targetId), eq(platformsTable.userId, req.userId)));
+    }
+  } else {
+    await db
+      .update(platformsTable)
+      .set({
+        isConnected: false,
+        accountName: null,
+        accountId: null,
+        accessToken: null,
+        refreshToken: null,
+        tokenExpiresAt: null,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(eq(platformsTable.userId, req.userId), eq(platformsTable.platform, platform)),
+      );
+  }
 
   res.json({ success: true });
 });
