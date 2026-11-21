@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, postsTable, platformsTable } from "@workspace/db";
-import { eq, and, desc, ne, asc } from "drizzle-orm";
+import { eq, and, desc, ne, asc, or } from "drizzle-orm";
 import { requireAuth } from "../middlewares/requireAuth";
 import {
   CreatePostBody,
@@ -630,12 +630,16 @@ router.post("/posts/:id/refresh-metrics", requireAuth, async (req, res): Promise
 });
 
 router.post("/posts/refresh-metrics", requireAuth, async (req, res): Promise<void> => {
+  // Busca posts publicados E falhos (podem ter plataformas individuais com sucesso)
   const publishedPosts = await db
     .select()
     .from(postsTable)
-    .where(and(eq(postsTable.userId, req.userId), eq(postsTable.status, "published")))
+    .where(and(
+      eq(postsTable.userId, req.userId),
+      or(eq(postsTable.status, "published"), eq(postsTable.status, "failed")),
+    ))
     .orderBy(desc(postsTable.id))
-    .limit(15);
+    .limit(20);
 
   const userPlatforms = await db
     .select()
