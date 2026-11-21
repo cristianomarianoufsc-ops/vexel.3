@@ -148,7 +148,7 @@ export default function Posts() {
       (p) =>
         p.status === "published" &&
         p.platformResults?.some(
-          (pr) => pr.status === "success" && (pr.views === undefined || pr.views === null) && !pr.lastSyncAt
+          (pr) => pr.status === "success" && (pr.views === undefined || pr.views === null)
         )
     );
     if (hasUnsynced && !isRefreshingAll) {

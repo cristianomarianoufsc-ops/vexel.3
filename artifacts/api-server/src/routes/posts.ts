@@ -357,6 +357,11 @@ export async function runPublishJob(options: { id: number; userId: string }): Pr
             postId: uploaded.mediaId,
             postUrl: uploaded.url,
             errorMessage: null,
+            views: 0,
+            likes: 0,
+            comments: 0,
+            shares: null,
+            lastSyncAt: new Date().toISOString(),
           };
           await saveProgress();
         } else if (platform === "tiktok") {
@@ -581,7 +586,11 @@ router.post("/posts/:id/refresh-metrics", requireAuth, async (req, res): Promise
         const igToken = (pr.platform === "instagram_2" ? igPlatforms[1]?.accessToken : igPlatforms[0]?.accessToken)
           || igPlatforms.find((p) => p.isConnected && p.accessToken)?.accessToken;
 
-        const stats = await getInstagramMediaMetrics(identifier, igToken ?? undefined);
+        const stats = await getInstagramMediaMetrics({
+          mediaId: pr.postId,
+          postUrl: pr.postUrl,
+          accessToken: igToken,
+        });
         pr.views = stats.views;
         pr.likes = stats.likes;
         pr.comments = stats.comments;
@@ -667,7 +676,11 @@ router.post("/posts/refresh-metrics", requireAuth, async (req, res): Promise<voi
           const igToken = (pr.platform === "instagram_2" ? igPlatforms[1]?.accessToken : igPlatforms[0]?.accessToken)
             || igPlatforms.find((p) => p.isConnected && p.accessToken)?.accessToken;
 
-          const stats = await getInstagramMediaMetrics(identifier, igToken ?? undefined);
+          const stats = await getInstagramMediaMetrics({
+          mediaId: pr.postId,
+          postUrl: pr.postUrl,
+          accessToken: igToken,
+        });
           pr.views = stats.views;
           pr.likes = stats.likes;
           pr.comments = stats.comments;

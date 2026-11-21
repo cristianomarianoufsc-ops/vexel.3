@@ -249,64 +249,73 @@ export async function uploadInstagramReel(options: {
   return result;
 }
 
-export function idToInstagramShortcode(idStr: string): string {
-  try {
-    const cleanId = idStr.split("_")[0];
-    const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
-    let id = BigInt(cleanId);
-    let shortcode = "";
-    while (id > 0n) {
-      const rem = id % 64n;
-      shortcode = alphabet[Number(rem)] + shortcode;
-      id = id / 64n;
-    }
-    return shortcode;
-  } catch {
-    return "";
+export function extractInstagramShortcode(
+  mediaId?: string | null,
+  postUrl?: string | null,
+): string | null {
+  // 1) Prioridade máxima: extrair diretamente do postUrl se fornecido (ex: https://www.instagram.com/reel/Df-NnrKmSXf/)
+  if (postUrl) {
+    const urlMatch = postUrl.match(/(?:reel|p)\/([A-Za-z0-9_-]+)/);
+    if (urlMatch) return urlMatch[1];
   }
-}
-
-export function extractInstagramShortcode(identifier: string | null | undefined): string | null {
-  if (!identifier) return null;
-  const urlMatch = identifier.match(/(?:reel|p)\/([A-Za-z0-9_-]+)/);
-  if (urlMatch) return urlMatch[1];
-  if (/^[A-Za-z0-9_-]{9,13}$/.test(identifier) && !/^\d+$/.test(identifier)) {
-    return identifier;
+  // 2) Se o mediaId parece com um shortcode (9 a 13 caracteres alfanuméricos com hífen/underline, não puramente numérico)
+  if (mediaId && /^[A-Za-z0-9_-]{9,13}$/.test(mediaId) && !/^\d+$/.test(mediaId)) {
+    return mediaId;
   }
-  if (/^\d+$/.test(identifier.split("_")[0])) {
-    const sc = idToInstagramShortcode(identifier);
-    if (sc) return sc;
+  // 3) Se o mediaId contém uma URL
+  if (mediaId) {
+    const urlMatch = mediaId.match(/(?:reel|p)\/([A-Za-z0-9_-]+)/);
+    if (urlMatch) return urlMatch[1];
   }
   return null;
 }
 
-export async function getInstagramMediaMetrics(
-  mediaIdOrUrl: string,
-  accessToken?: string | null,
-): Promise<{ views: number; likes: number; comments: number; shares: number }> {
+export async function getInstagramMediaMetrics(options: {
+  mediaId?: string | null;
+  postUrl?: string | null;
+  accessToken?: string | null;
+}): Promise<{ views: number; likes: number; comments: number; shares: number }> {
   let views = 0;
   let likes = 0;
   let comments = 0;
   let shares = 0;
 
-  const shortcode = extractInstagramShortcode(mediaIdOrUrl);
+  let shortcode = extractInstagramShortcode(options.mediaId, options.postUrl);
 
-  // 1) Se tiver accessToken, tenta os endpoints oficiais da Meta Graph API
-  if (accessToken) {
+  // 1) Se temos accessToken e mediaId numérico, tenta buscar via Meta Graph API oficial
+  if (options.accessToken && options.mediaId && /^\d+$/.test(options.mediaId.split("_")[0])) {
+    const numericId = options.mediaId.split("_")[0];
     for (const host of [
       "https://graph.instagram.com/v21.0",
       "https://graph.facebook.com/v21.0",
-      "https://graph.instagram.com/v26.0",
     ]) {
       try {
-        const url = new URL(`${host}/${encodeURIComponent(mediaIdOrUrl)}`);
-        url.searchParams.set("fields", "id,like_count,comments_count,media_type,timestamp");
-        url.searchParams.set("access_token", accessToken);
+        const url = new URL(`${host}/${numericId}`);
+        url.searchParams.set("fields", "id,shortcode,permalink,like_count,comments_count,shares_count");
+        url.searchParams.set("access_token", options.accessToken);
         const res = await fetch(url);
         if (res.ok) {
-          const data = (await res.json()) as { like_count?: number; comments_count?: number };
-          if (typeof data.like_count === "number") likes = data.like_count;
-          if (typeof data.comments_count === "number") comments = data.comments_count;
+          const data = (await res.json()) as {
+            shortcode?: string;
+            permalink?: string;
+            like_count?: number;
+            comments_count?: number;
+            shares_count?: number;
+          };
+          if (data.shortcode && !shortcode) shortcode = data.shortcode;
+          if (data.permalink && !shortcode) {
+            const m = data.permalink.match(/(?:reel|p)\/([A-Za-z0-9_-]+)/);
+            if (m) shortcode = m[1];
+          }
+          if (typeof data.like_count === "number" && data.like_count > likes) {
+            likes = data.like_count;
+          }
+          if (typeof data.comments_count === "number" && data.comments_count > comments) {
+            comments = data.comments_count;
+          }
+          if (typeof data.shares_count === "number" && data.shares_count > shares) {
+            shares = data.shares_count;
+          }
           break;
         }
       } catch {
@@ -314,10 +323,11 @@ export async function getInstagramMediaMetrics(
       }
     }
 
+    // Tenta também buscar métricas de insights (plays, reach, shares)
     try {
-      const insightsUrl = new URL(`https://graph.instagram.com/v21.0/${encodeURIComponent(mediaIdOrUrl)}/insights`);
+      const insightsUrl = new URL(`https://graph.instagram.com/v21.0/${numericId}/insights`);
       insightsUrl.searchParams.set("metric", "plays,reach,shares,total_interactions");
-      insightsUrl.searchParams.set("access_token", accessToken);
+      insightsUrl.searchParams.set("access_token", options.accessToken);
       const res = await fetch(insightsUrl);
       if (res.ok) {
         const data = (await res.json()) as {
@@ -326,9 +336,9 @@ export async function getInstagramMediaMetrics(
         if (Array.isArray(data.data)) {
           for (const m of data.data) {
             const val = m.values?.[0]?.value ?? 0;
-            if (m.name === "plays" || m.name === "views") views = val;
-            if (m.name === "shares") shares = val;
-            if (!views && m.name === "reach") views = val;
+            if ((m.name === "plays" || m.name === "views") && val > views) views = val;
+            if (m.name === "shares" && val > shares) shares = val;
+            if (!views && m.name === "reach" && val > views) views = val;
           }
         }
       }
@@ -337,31 +347,46 @@ export async function getInstagramMediaMetrics(
     }
   }
 
-  // 2) Se likes ou views ainda não foram obtidos (ou para garantir dados em tempo real sem aprovação da Meta),
-  // faz a consulta direta ao embed oficial do Instagram
-  if (shortcode && (likes === 0 || views === 0)) {
+  // 2) Se temos o shortcode (extraído do postUrl ou da Graph API), busca no embed oficial do Instagram
+  // Isso garante contagem exata e em tempo real de visualizações e curtidas mesmo sem aprovação de app na Meta!
+  if (shortcode) {
     try {
       const embedUrl = `https://www.instagram.com/reel/${shortcode}/embed/captioned/`;
       const res = await fetch(embedUrl, {
         headers: {
           "User-Agent": "curl/8.5.0",
-          Accept: "text/html,application/xhtml+xml",
+          Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         },
       });
+
       if (res.ok) {
         const html = await res.text();
         const likeMatch = html.match(/edge_liked_by[\\"]+:[\\"]*\{[\\"]*count[\\"]*:(\d+)/);
         const commentMatch = html.match(/edge_media_to_comment[\\"]+:[\\"]*\{[\\"]*count[\\"]*:(\d+)/);
         const viewMatch = html.match(/(?:video_view_count|play_count|video_play_count)[\\"]+:[\\"]*(\d+)/);
 
-        if (likeMatch && (!likes || Number(likeMatch[1]) > likes)) {
-          likes = Number(likeMatch[1]);
+        if (likeMatch) {
+          const l = Number(likeMatch[1]);
+          if (l > likes) likes = l;
         }
-        if (commentMatch && (!comments || Number(commentMatch[1]) > comments)) {
-          comments = Number(commentMatch[1]);
+        if (commentMatch) {
+          const c = Number(commentMatch[1]);
+          if (c > comments) comments = c;
         }
-        if (viewMatch && (!views || Number(viewMatch[1]) > views)) {
-          views = Number(viewMatch[1]);
+        if (viewMatch) {
+          const v = Number(viewMatch[1]);
+          if (v > views) views = v;
+        }
+
+        // Fallback meta tags se likes ainda for 0
+        if (likes === 0 || comments === 0) {
+          const metaMatch = html.match(/content="([0-9.,KMBkmb]+)\s*(?:likes|curtidas)[^0-9]*([0-9.,KMBkmb]+)\s*(?:comments|coment[áa]rios)/i);
+          if (metaMatch) {
+            const l = parseInt(metaMatch[1].replace(/[^0-9]/g, ""), 10);
+            const c = parseInt(metaMatch[2].replace(/[^0-9]/g, ""), 10);
+            if (!isNaN(l) && l > likes) likes = l;
+            if (!isNaN(c) && c > comments) comments = c;
+          }
         }
       }
     } catch {
