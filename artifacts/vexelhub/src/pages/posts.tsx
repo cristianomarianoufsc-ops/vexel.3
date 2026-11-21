@@ -146,7 +146,7 @@ export default function Posts() {
     if (isLoading || posts.length === 0) return;
     const hasUnsynced = posts.some(
       (p) =>
-        p.status === "published" &&
+        (p.status === "published" || p.status === "failed") &&
         p.platformResults?.some(
           (pr) => pr.status === "success" && (pr.views === undefined || pr.views === null)
         )
