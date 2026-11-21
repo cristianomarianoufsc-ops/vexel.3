@@ -281,6 +281,7 @@ export async function getInstagramMediaMetrics(options: {
   let shares = 0;
 
   let shortcode = extractInstagramShortcode(options.mediaId, options.postUrl);
+  console.log(`[IG-METRICS] mediaId=${options.mediaId}, postUrl=${options.postUrl}, shortcode=${shortcode}`);
 
   // 1) Se temos accessToken e mediaId numérico, tenta buscar via Meta Graph API oficial
   if (options.accessToken && options.mediaId && /^\d+$/.test(options.mediaId.split("_")[0])) {
@@ -316,6 +317,7 @@ export async function getInstagramMediaMetrics(options: {
           if (typeof data.shares_count === "number" && data.shares_count > shares) {
             shares = data.shares_count;
           }
+          console.log(`[IG-METRICS] Graph API (${host}): shortcode=${data.shortcode}, likes=${data.like_count}, comments=${data.comments_count}`);
           break;
         }
       } catch {
@@ -347,52 +349,67 @@ export async function getInstagramMediaMetrics(options: {
     }
   }
 
-  // 2) Se temos o shortcode (extraído do postUrl ou da Graph API), busca no embed oficial do Instagram
-  // Isso garante contagem exata e em tempo real de visualizações e curtidas mesmo sem aprovação de app na Meta!
+  // 2) Se temos o shortcode, busca no embed oficial do Instagram
+  // Isso garante contagem exata e em tempo real mesmo sem aprovação de app na Meta!
   if (shortcode) {
     try {
-      const embedUrl = `https://www.instagram.com/reel/${shortcode}/embed/captioned/`;
-      const res = await fetch(embedUrl, {
-        headers: {
-          "User-Agent": "curl/8.5.0",
-          Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        },
-      });
+      // Tenta /reel/ primeiro, depois /p/ se não encontrar dados
+      const embedPaths = [`/reel/${shortcode}/embed/captioned/`, `/p/${shortcode}/embed/captioned/`];
+      for (const embedPath of embedPaths) {
+        const embedUrl = `https://www.instagram.com${embedPath}`;
+        console.log(`[IG-METRICS] Fetching embed: ${embedUrl}`);
+        const res = await fetch(embedUrl, {
+          headers: {
+            "User-Agent": "curl/8.5.0",
+            Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          },
+        });
 
-      if (res.ok) {
-        const html = await res.text();
-        const likeMatch = html.match(/edge_liked_by[\\"]+:[\\"]*\{[\\"]*count[\\"]*:(\d+)/);
-        const commentMatch = html.match(/edge_media_to_comment[\\"]+:[\\"]*\{[\\"]*count[\\"]*:(\d+)/);
-        const viewMatch = html.match(/(?:video_view_count|play_count|video_play_count)[\\"]+:[\\"]*(\d+)/);
+        console.log(`[IG-METRICS] Embed response: status=${res.status}`);
 
-        if (likeMatch) {
-          const l = Number(likeMatch[1]);
-          if (l > likes) likes = l;
-        }
-        if (commentMatch) {
-          const c = Number(commentMatch[1]);
-          if (c > comments) comments = c;
-        }
-        if (viewMatch) {
-          const v = Number(viewMatch[1]);
-          if (v > views) views = v;
-        }
+        if (res.ok) {
+          const html = await res.text();
+          console.log(`[IG-METRICS] HTML length: ${html.length}`);
+          const likeMatch = html.match(/edge_liked_by[\\\"]+:[\\\"]*\{[\\\"]*count[\\\"]*:(\d+)/);
+          const commentMatch = html.match(/edge_media_to_comment[\\\"]+:[\\\"]*\{[\\\"]*count[\\\"]*:(\d+)/);
+          const viewMatch = html.match(/(?:video_view_count|play_count|video_play_count)[\\\"]+:[\\\"]*(\d+)/);
 
-        // Fallback meta tags se likes ainda for 0
-        if (likes === 0 || comments === 0) {
-          const metaMatch = html.match(/content="([0-9.,KMBkmb]+)\s*(?:likes|curtidas)[^0-9]*([0-9.,KMBkmb]+)\s*(?:comments|coment[áa]rios)/i);
-          if (metaMatch) {
-            const l = parseInt(metaMatch[1].replace(/[^0-9]/g, ""), 10);
-            const c = parseInt(metaMatch[2].replace(/[^0-9]/g, ""), 10);
-            if (!isNaN(l) && l > likes) likes = l;
-            if (!isNaN(c) && c > comments) comments = c;
+          console.log(`[IG-METRICS] Matches: likes=${likeMatch?.[1]}, comments=${commentMatch?.[1]}, views=${viewMatch?.[1]}`);
+
+          if (likeMatch) {
+            const l = Number(likeMatch[1]);
+            if (l > likes) likes = l;
           }
+          if (commentMatch) {
+            const c = Number(commentMatch[1]);
+            if (c > comments) comments = c;
+          }
+          if (viewMatch) {
+            const v = Number(viewMatch[1]);
+            if (v > views) views = v;
+          }
+
+          // Se conseguimos dados, não precisa tentar o outro path
+          if (likes > 0 || comments > 0 || views > 0) break;
+
+          // Fallback meta tags
+          if (likes === 0 || comments === 0) {
+            const metaMatch = html.match(/content="([0-9.,KMBkmb]+)\s*(?:likes|curtidas)[^0-9]*([0-9.,KMBkmb]+)\s*(?:comments|coment[áa]rios)/i);
+            if (metaMatch) {
+              const l = parseInt(metaMatch[1].replace(/[^0-9]/g, ""), 10);
+              const c = parseInt(metaMatch[2].replace(/[^0-9]/g, ""), 10);
+              if (!isNaN(l) && l > likes) likes = l;
+              if (!isNaN(c) && c > comments) comments = c;
+            }
+          }
+          if (likes > 0 || views > 0) break;
         }
       }
-    } catch {
-      // fallback ignore
+    } catch (err) {
+      console.log(`[IG-METRICS] Embed error: ${err}`);
     }
   }
 
+  console.log(`[IG-METRICS] Final: views=${views}, likes=${likes}, comments=${comments}, shares=${shares}`);
   return { views, likes, comments, shares };
 }
